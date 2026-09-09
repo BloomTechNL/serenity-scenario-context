@@ -48,9 +48,22 @@ await actorCalled('Alice')
 - `test/unit` - unit tests for `ScenarioContext`, `ScenarioContextPiece` and
   `UseScenarioContext`, exercised in isolation from Serenity/JS actors.
 - `test/acceptance/support-desk` - a runnable, end-to-end example: a fake
-  "support desk" domain (`Ticket`, `Customer`) driven through real
-  Serenity/JS actors, interactions and questions. Read it as a worked example
-  of the ability; run it as a regression test.
+  "support desk" domain (`Ticket`, `Customer`, `HomeAddress`, `EmailAddress`)
+  driven through real Serenity/JS actors, interactions and questions. Read it
+  as a worked example of the ability; run it as a regression test. It covers
+  two flavours of the ability:
+  - each actor with their own, isolated `ScenarioContext` (`SupportDeskActors`);
+  - several actors sharing one `ScenarioContext` as a small contact
+    directory, qualifying each piece by the actor's name it belongs to
+    (`SharedDirectoryActors`).
+
+  Note: this project uses plain Jest, which - unlike Serenity/JS's official
+  Mocha, Jasmine and Cucumber adapters - doesn't reset actors between tests
+  automatically. The suites therefore avoid reusing an actor's name across
+  `describe` blocks that `engage` a different `Cast`, so that each actor is
+  always freshly prepared with the ability the current test expects. See the
+  comment above `describe('Several actors sharing a scenario context...`
+  for the full explanation.
 
 ```bash
 npm test              # everything

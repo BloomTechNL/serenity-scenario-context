@@ -2,12 +2,21 @@ import { actorCalled, engage } from '@serenity-js/core';
 import { Ensure, equals } from '@serenity-js/assertions';
 
 import { Customer } from './domain/Customer';
+import { EmailAddress } from './domain/EmailAddress';
+import { HomeAddress } from './domain/HomeAddress';
 import { Ticket } from './domain/Ticket';
 import { Focus } from './interactions/Focus';
 import { Raise } from './interactions/Raise';
+import { Record } from './interactions/Record';
 import { Resolve } from './interactions/Resolve';
-import { TheCustomerInTheSpotlight, TheTicket, TheTicketInTheSpotlight } from './questions/questions';
-import { SupportDeskActors } from './Actors';
+import {
+    TheCustomerInTheSpotlight,
+    TheEmailAddressOf,
+    TheHomeAddressOf,
+    TheTicket,
+    TheTicketInTheSpotlight,
+} from './questions/questions';
+import { SharedDirectoryActors, SupportDeskActors } from './Actors';
 
 /**
  * These acceptance tests double up as a worked example of the
@@ -123,5 +132,65 @@ describe('A support agent using the scenario context', () => {
                 Focus.onTheTicket('TICKET-404'),
             )
         ).rejects.toThrow('Could not find Ticket qualified by TICKET-404 in the scenario context');
+    });
+});
+
+/**
+ * A second flavour of the same ability: several actors sharing a single
+ * `ScenarioContext` (see `SharedDirectoryActors`), using it as a small
+ * contact directory. Both a `HomeAddress` and an `EmailAddress` are stored
+ * per actor, told apart purely by qualifying each piece with the name of
+ * the actor it belongs to.
+ *
+ * Note: this suite deliberately uses actor names (Priya, Tomasz, Farah)
+ * that aren't used anywhere else in this file. Serenity/JS keeps actors
+ * around for the lifetime of the process and only prepares an actor - i.e.
+ * assigns them the abilities granted by the current `engage`d `Cast` - the
+ * first time they're referenced; official test runner adapters (Mocha,
+ * Jasmine, Cucumber) reset that between scenarios automatically, but this
+ * project's plain Jest setup doesn't. Reusing e.g. 'Alice' from the suite
+ * above would resurrect her from the *previous* `SupportDeskActors` cast,
+ * complete with her own isolated context, rather than handing her the
+ * shared one `SharedDirectoryActors` prepares here.
+ */
+describe('Several actors sharing a scenario context as a contact directory', () => {
+
+    beforeEach(() => engage(new SharedDirectoryActors()));
+
+    it('lets an actor look up a colleague’s contact details by name, even though they never recorded them', async () => {
+        const priyasHomeAddress  = new HomeAddress('12 Baker Street, London');
+        const priyasEmailAddress = new EmailAddress('priya@example.org');
+        const tomaszsHomeAddress  = new HomeAddress('221B Baker Street, London');
+        const tomaszsEmailAddress = new EmailAddress('tomasz@example.org');
+
+        await actorCalled('Priya').attemptsTo(
+            Record.contactDetailsOf('Priya', priyasHomeAddress, priyasEmailAddress),
+        );
+
+        await actorCalled('Tomasz').attemptsTo(
+            Record.contactDetailsOf('Tomasz', tomaszsHomeAddress, tomaszsEmailAddress),
+
+            // Tomasz can look up Priya's details, qualified by her name...
+            Ensure.that(TheHomeAddressOf('Priya'), equals(priyasHomeAddress)),
+            Ensure.that(TheEmailAddressOf('Priya'), equals(priyasEmailAddress)),
+
+            // ...as well as his own, even though both are the same type of object
+            Ensure.that(TheHomeAddressOf('Tomasz'), equals(tomaszsHomeAddress)),
+            Ensure.that(TheEmailAddressOf('Tomasz'), equals(tomaszsEmailAddress)),
+        );
+    });
+
+    it('complains when nobody by that name has recorded their contact details', async () => {
+        await expect(
+            actorCalled('Farah').attemptsTo(
+                Record.contactDetailsOf(
+                    'Farah',
+                    new HomeAddress('12 Baker Street, London'),
+                    new EmailAddress('farah@example.org'),
+                ),
+
+                Ensure.that(TheHomeAddressOf('Carol'), equals(new HomeAddress('unknown'))),
+            )
+        ).rejects.toThrow('Could not find HomeAddress qualified by Carol in the scenario context');
     });
 });
