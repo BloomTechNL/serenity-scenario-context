@@ -1,0 +1,33 @@
+{
+  "name": "serenity-scenario-context",
+  "version": "1.0.0",
+  "description": "A Serenity/JS ability that lets actors use a ScenarioContext - an advanced, qualifier- and type-aware form of notes.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "jest",
+    "test:unit": "jest test/unit",
+    "test:acceptance": "jest test/acceptance"
+  },
+  "keywords": [
+    "serenity-js",
+    "screenplay-pattern",
+    "testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "peerDependencies": {
+    "@serenity-js/core": "^3.46.0"
+  },
+  "devDependencies": {
+    "@serenity-js/assertions": "^3.46.1",
+    "@serenity-js/core": "^3.46.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.5.0",
+    "jest": "^30.5.1",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.9.3"
+  }
+}
