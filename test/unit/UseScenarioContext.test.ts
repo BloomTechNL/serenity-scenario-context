@@ -1,13 +1,6 @@
-import { ScenarioContext, UseScenarioContext } from '../../src';
+import { ScenarioContext, ScenarioContextSearcher, UseScenarioContext } from '../../src';
 
-// Two unrelated fixture types, used to prove that `find` filters by type
-// as well as by qualifiers.
 class Fruit {
-    constructor(public readonly name: string) {
-    }
-}
-
-class Vegetable {
     constructor(public readonly name: string) {
     }
 }
@@ -19,7 +12,7 @@ describe('UseScenarioContext', () => {
 
         ability.add(new Fruit('apple'));
 
-        expect(ability.find(Fruit)).toBeInstanceOf(Fruit);
+        expect(ability.withType(Fruit).findOne()).toBeInstanceOf(Fruit);
     });
 
     describe('add', () => {
@@ -30,7 +23,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple);
 
-            expect(ability.find(Fruit)).toBe(apple);
+            expect(ability.withType(Fruit).findOne()).toBe(apple);
         });
 
         it('makes the value findable by its type and qualifiers', () => {
@@ -39,7 +32,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple, 'crunchy', 'red');
 
-            expect(ability.find(Fruit, 'red')).toBe(apple);
+            expect(ability.withType(Fruit).withQualifiers('red').findOne()).toBe(apple);
         });
 
         it('returns the context piece that was created, for convenience', () => {
@@ -53,78 +46,32 @@ describe('UseScenarioContext', () => {
         });
     });
 
-    describe('find', () => {
+    describe('withType', () => {
 
-        it('throws when nothing of the requested type has been added', () => {
+        it('returns a ScenarioContextSearcher scoped to the given type and this ability\'s context', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
 
-            expect(() => ability.find(Fruit)).toThrow(
-                'Could not find Fruit in the scenario context'
-            );
+            expect(ability.withType(Fruit)).toBeInstanceOf(ScenarioContextSearcher);
         });
 
-        it('throws when nothing matches the requested qualifiers', () => {
+        // The exhaustive behaviour of searching - filtering by type and
+        // qualifiers, findOne() vs findLastUsed(), the spotlight effect - is
+        // covered in ScenarioContextSearcher's own unit tests. These tests
+        // just confirm the ability wires everything up correctly.
+
+        it('lets a single match be found unambiguously with findOne()', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
-            ability.add(new Fruit('apple'), 'red');
+            const apple = ability.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(() => ability.find(Fruit, 'green')).toThrow(
-                'Could not find Fruit qualified by green in the scenario context'
-            );
+            expect(ability.withType(Fruit).withQualifiers('crunchy').findOne()).toBe(apple);
         });
 
-        it('does not confuse values of different types, even without qualifiers', () => {
-            const ability = UseScenarioContext.using(new ScenarioContext());
-            const carrot = new Vegetable('carrot');
-
-            ability.add(carrot);
-
-            expect(ability.find(Vegetable)).toBe(carrot);
-            expect(() => ability.find(Fruit)).toThrow();
-        });
-
-        it('returns the most recently added match when several pieces of the same type exist', () => {
+        it('lets the most recently used match be found with findLastUsed(), even when several exist', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             ability.add(new Fruit('apple'));
             const banana = ability.add(new Fruit('banana')).value;
 
-            expect(ability.find(Fruit)).toBe(banana);
-        });
-
-        it('filters candidates of the same type by their qualifiers', () => {
-            const ability = UseScenarioContext.using(new ScenarioContext());
-            const apple = ability.add(new Fruit('apple'), 'crunchy').value;
-            ability.add(new Fruit('banana'), 'soft');
-
-            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
-        });
-
-        it('requires every requested qualifier to be present, not just some of them', () => {
-            const ability = UseScenarioContext.using(new ScenarioContext());
-            ability.add(new Fruit('apple'), 'crunchy');
-            const greenApple = ability.add(new Fruit('green apple'), 'crunchy', 'green').value;
-
-            expect(ability.find(Fruit, 'crunchy', 'green')).toBe(greenApple);
-        });
-
-        it('puts the found piece in the spotlight, on top of the scenario context', () => {
-            const ability = UseScenarioContext.using(new ScenarioContext());
-            const apple  = ability.add(new Fruit('apple'), 'crunchy').value;
-            const banana = ability.add(new Fruit('banana')).value; // banana is now on top
-
-            // finding apple explicitly, by its qualifier, should move it back on top
-            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
-
-            // so the very next, unqualified search finds apple again - not banana
-            expect(ability.find(Fruit)).toBe(apple);
-        });
-
-        it('leaves qualifiers of a found piece unchanged - it does not become "unqualified"', () => {
-            const ability = UseScenarioContext.using(new ScenarioContext());
-            const apple = ability.add(new Fruit('apple'), 'crunchy').value;
-
-            ability.find(Fruit, 'crunchy');
-
-            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
+            expect(ability.withType(Fruit).findLastUsed()).toBe(banana);
         });
     });
 });

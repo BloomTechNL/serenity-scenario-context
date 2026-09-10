@@ -1,15 +1,9 @@
 import { Ability } from '@serenity-js/core';
 
+import { Constructor } from './Constructor';
 import { ScenarioContext } from './ScenarioContext';
 import { ScenarioContextPiece } from './ScenarioContextPiece';
-
-/**
- * A constructor function for `Value`, used to identify what type of object
- * {@link UseScenarioContext#find} should look for.
- */
-export interface Constructor<Value> {
-    new (...args: any[]): Value;
-}
+import { ScenarioContextSearcher } from './ScenarioContextSearcher';
 
 /**
  * An {@link https://serenity-js.org/api/core/class/Ability/ | Ability} that
@@ -41,7 +35,11 @@ export interface Constructor<Value> {
  * ## Recalling something
  *
  * ```ts
- * const ticket = UseScenarioContext.as(actor).find(Ticket, 'urgent');
+ * // when you expect exactly one match:
+ * const ticket = UseScenarioContext.as(actor).withType(Ticket).withQualifiers('urgent').findOne();
+ *
+ * // when several might match, and the most recently used one will do:
+ * const ticket = UseScenarioContext.as(actor).withType(Ticket).findLastUsed();
  * ```
  *
  * Finding a piece of context puts it "in the spotlight" - i.e. on top of
@@ -75,33 +73,14 @@ export class UseScenarioContext extends Ability {
     }
 
     /**
-     * Looks for a context piece whose value is an instance of `type` and
-     * whose qualifiers include every one of the given `qualifiers`.
-     *
-     * The pieces are inspected top to bottom, so when several pieces match,
-     * the one that was put on top most recently - i.e. the one currently "in
-     * the spotlight" - is the one that gets returned.
-     *
-     * A piece that is found is itself put on top of the scenario context,
-     * putting it "in the spotlight" for any subsequent, less specific
-     * search.
-     *
-     * @throws Error
-     *  if no matching context piece can be found.
+     * Starts a search of the scenario context for pieces whose value is an
+     * instance of `type`. Narrow the search down further with
+     * {@link ScenarioContextSearcher#withQualifiers}, then resolve it with
+     * either {@link ScenarioContextSearcher#findOne} - when you expect at
+     * most one match - or {@link ScenarioContextSearcher#findLastUsed} -
+     * when several might match and the most recently used one will do.
      */
-    find<Value>(type: Constructor<Value>, ...qualifiers: string[]): Value {
-        for (const piece of this.scenarioContext) {
-            if (piece.value instanceof type && piece.hasQualifiers(qualifiers)) {
-                this.scenarioContext.putOnTop(piece);
-
-                return piece.value as Value;
-            }
-        }
-
-        throw new Error(
-            qualifiers.length > 0
-                ? `Could not find ${ type.name } qualified by ${ qualifiers.join(', ') } in the scenario context`
-                : `Could not find ${ type.name } in the scenario context`
-        );
+    withType<Value>(type: Constructor<Value>): ScenarioContextSearcher<Value> {
+        return new ScenarioContextSearcher(this.scenarioContext, type);
     }
 }

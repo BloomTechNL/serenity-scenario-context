@@ -23,6 +23,17 @@ import { SharedDirectoryActors, SupportDeskActors } from './Actors';
  * `UseScenarioContext` ability, exercised the way it's meant to be used:
  * through a Serenity/JS actor, in a fake "support desk" domain where an
  * agent juggles several customer tickets within one scenario.
+ *
+ * Note: every test below uses its own, never-repeated actor name. Serenity/
+ * JS keeps actors around for the lifetime of the process and only prepares
+ * an actor - i.e. assigns them the abilities granted by the current
+ * `engage`d `Cast` - the first time they're referenced; official test
+ * runner adapters (Mocha, Jasmine, Cucumber) reset that between scenarios
+ * automatically, but this project's plain Jest setup doesn't. Reusing an
+ * actor's name across tests would resurrect them with whatever ability (and
+ * however-populated a `ScenarioContext`) they were left with previously,
+ * rather than a fresh one - which matters a lot once `findOne()` is used,
+ * since it fails outright on any unexpected leftover match.
  */
 describe('A support agent using the scenario context', () => {
 
@@ -33,7 +44,7 @@ describe('A support agent using the scenario context', () => {
         const login     = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
         const feature   = new Ticket('TICKET-3', 'Please add dark mode');
 
-        await actorCalled('Alice').attemptsTo(
+        await actorCalled('Amara').attemptsTo(
             Raise.aTicket(billing),
             Raise.aTicket(login),
             Raise.aTicket(feature),
@@ -46,7 +57,7 @@ describe('A support agent using the scenario context', () => {
         const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
         const login    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
 
-        await actorCalled('Alice').attemptsTo(
+        await actorCalled('Bilal').attemptsTo(
             Raise.aTicket(billing),
             Raise.aTicket(login),           // login is now in the spotlight
 
@@ -60,7 +71,7 @@ describe('A support agent using the scenario context', () => {
         const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
         const login    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
 
-        await actorCalled('Alice').attemptsTo(
+        await actorCalled('Chidi').attemptsTo(
             Raise.aTicket(billing),
             Raise.aTicket(login),
 
@@ -79,7 +90,7 @@ describe('A support agent using the scenario context', () => {
         const login    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
         const feature  = new Ticket('TICKET-3', 'Please add dark mode');
 
-        await actorCalled('Alice').attemptsTo(
+        await actorCalled('Diana').attemptsTo(
             Raise.aTicket(billing),
             Raise.aTicket(login),    // the only ticket qualified 'urgent'
             Raise.aTicket(feature),  // now on top, but not urgent
@@ -95,7 +106,7 @@ describe('A support agent using the scenario context', () => {
         const login = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
         const bob    = new Customer('Bob');
 
-        await actorCalled('Alice').attemptsTo(
+        await actorCalled('Ezra').attemptsTo(
             Raise.aTicket(login),
             Raise.aCustomer(bob),  // bob is now on top of the context
 
@@ -106,32 +117,48 @@ describe('A support agent using the scenario context', () => {
     });
 
     it('keeps each actor’s scenario context separate from every other actor’s', async () => {
-        const alicesTicket = new Ticket('TICKET-1', 'Invoice looks wrong');
-        const bobsTicket    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
+        const faridasTicket = new Ticket('TICKET-1', 'Invoice looks wrong');
+        const gabrielsTicket = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
 
-        await actorCalled('Alice').attemptsTo(
-            Raise.aTicket(alicesTicket),
+        await actorCalled('Farida').attemptsTo(
+            Raise.aTicket(faridasTicket),
         );
 
-        await actorCalled('Bob').attemptsTo(
-            Raise.aTicket(bobsTicket),
+        await actorCalled('Gabriel').attemptsTo(
+            Raise.aTicket(gabrielsTicket),
 
-            Ensure.that(TheTicketInTheSpotlight(), equals(bobsTicket)),
+            Ensure.that(TheTicketInTheSpotlight(), equals(gabrielsTicket)),
         );
 
-        await actorCalled('Alice').attemptsTo(
-            Ensure.that(TheTicketInTheSpotlight(), equals(alicesTicket)),
+        await actorCalled('Farida').attemptsTo(
+            Ensure.that(TheTicketInTheSpotlight(), equals(faridasTicket)),
         );
     });
 
     it('complains when no ticket matches the requested qualifiers', async () => {
         await expect(
-            actorCalled('Alice').attemptsTo(
+            actorCalled('Hiro').attemptsTo(
                 Raise.aTicket(new Ticket('TICKET-1', 'Invoice looks wrong')),
 
                 Focus.onTheTicket('TICKET-404'),
             )
         ).rejects.toThrow('Could not find Ticket qualified by TICKET-404 in the scenario context');
+    });
+
+    it('insists on a single match when refocusing by id, complaining if history makes that ambiguous', async () => {
+        const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
+
+        await expect(
+            actorCalled('Imani').attemptsTo(
+                Raise.aTicket(billing),
+                Resolve.theTicketInTheSpotlight(),  // re-tags billing, but its original 'TICKET-1'-qualified piece is still there too
+
+                Focus.onTheTicket('TICKET-1'),      // now ambiguous: two pieces are qualified 'TICKET-1'
+            )
+        ).rejects.toThrow(
+            'Found 2 instances of Ticket qualified by TICKET-1 in the scenario context, expected exactly one. '
+            + 'Use findLastUsed() instead if the most recently used one will do.'
+        );
     });
 });
 
@@ -142,16 +169,8 @@ describe('A support agent using the scenario context', () => {
  * per actor, told apart purely by qualifying each piece with the name of
  * the actor it belongs to.
  *
- * Note: this suite deliberately uses actor names (Priya, Tomasz, Farah)
- * that aren't used anywhere else in this file. Serenity/JS keeps actors
- * around for the lifetime of the process and only prepares an actor - i.e.
- * assigns them the abilities granted by the current `engage`d `Cast` - the
- * first time they're referenced; official test runner adapters (Mocha,
- * Jasmine, Cucumber) reset that between scenarios automatically, but this
- * project's plain Jest setup doesn't. Reusing e.g. 'Alice' from the suite
- * above would resurrect her from the *previous* `SupportDeskActors` cast,
- * complete with her own isolated context, rather than handing her the
- * shared one `SharedDirectoryActors` prepares here.
+ * As above, every actor name here (Priya, Tomasz, Farah) is unique across
+ * the whole file - see the note above the first `describe` for why.
  */
 describe('Several actors sharing a scenario context as a contact directory', () => {
 

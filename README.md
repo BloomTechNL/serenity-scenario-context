@@ -12,11 +12,19 @@ information, where the most recently used piece is always "in the spotlight".
   It can iterate top to bottom, put a new piece on top, and move an existing
   piece back to the top.
 - [`UseScenarioContext`](src/UseScenarioContext.ts) - the Serenity/JS
-  `Ability`. Actors use it to `add` domain objects (qualified however you
-  like) and `find` them again by type and qualifiers. Finding a piece puts it
-  back on top of the context - "in the spotlight" - so that whatever you
-  search for next, without being overly specific, tends to find what you were
-  just working with.
+  `Ability`. Actors use it to `add` domain objects, qualified however you
+  like, and `withType(Type)` to start searching for them again.
+- [`ScenarioContextSearcher`](src/ScenarioContextSearcher.ts) - returned by
+  `withType`. Narrow it down with `withQualifiers(...)`, then resolve it
+  with one of:
+  - `findOne()` - insists that exactly one piece matches, and throws
+    otherwise (including when more than one does - it doesn't guess);
+  - `findLastUsed()` - when several pieces might match, returns whichever
+    one was put on top of the context most recently, no questions asked.
+
+  Either way, the piece that's found is put back on top of the context -
+  "in the spotlight" - so that whatever you search for next, without being
+  overly specific, tends to find what you were just working with.
 
 ## Usage
 
@@ -34,7 +42,11 @@ const RaiseATicket = (ticket: Ticket) =>
 
 const TheTicketInTheSpotlight = () =>
     Question.about('the ticket in the spotlight', actor =>
-        UseScenarioContext.as(actor).find(Ticket));
+        UseScenarioContext.as(actor).withType(Ticket).findLastUsed());
+
+const TheTicketIdentifiedBy = (id: string) =>
+    Question.about(`ticket ${id}`, actor =>
+        UseScenarioContext.as(actor).withType(Ticket).withQualifiers(id).findOne());
 
 await actorCalled('Alice')
     .whoCan(UseScenarioContext.using())
@@ -45,8 +57,9 @@ await actorCalled('Alice')
 
 ## Tests
 
-- `test/unit` - unit tests for `ScenarioContext`, `ScenarioContextPiece` and
-  `UseScenarioContext`, exercised in isolation from Serenity/JS actors.
+- `test/unit` - unit tests for `ScenarioContext`, `ScenarioContextPiece`,
+  `ScenarioContextSearcher` and `UseScenarioContext`, exercised in isolation
+  from Serenity/JS actors.
 - `test/acceptance/support-desk` - a runnable, end-to-end example: a fake
   "support desk" domain (`Ticket`, `Customer`, `HomeAddress`, `EmailAddress`)
   driven through real Serenity/JS actors, interactions and questions. Read it
@@ -59,11 +72,14 @@ await actorCalled('Alice')
 
   Note: this project uses plain Jest, which - unlike Serenity/JS's official
   Mocha, Jasmine and Cucumber adapters - doesn't reset actors between tests
-  automatically. The suites therefore avoid reusing an actor's name across
-  `describe` blocks that `engage` a different `Cast`, so that each actor is
-  always freshly prepared with the ability the current test expects. See the
-  comment above `describe('Several actors sharing a scenario context...`
-  for the full explanation.
+  automatically. Every test therefore uses its own actor name, never reused
+  elsewhere in the file, so each actor is always freshly prepared rather
+  than resurrected with whatever ability (and however-populated a
+  `ScenarioContext`) an earlier test left them with. This matters more than
+  it otherwise would because `findOne()` fails outright on any unexpected
+  leftover match, rather than silently picking one. See the comment above
+  `describe('A support agent using the scenario context', ...)` for the full
+  explanation.
 
 ```bash
 npm test              # everything
