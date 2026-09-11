@@ -19,7 +19,7 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
      *
      * @returns the piece that was put on top, for convenience.
      */
-    put<Value>(piece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value> {
+    add<Value>(piece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value> {
         this.pieces.unshift(piece);
 
         return piece;

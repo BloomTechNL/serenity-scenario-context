@@ -15,8 +15,8 @@ describe('ScenarioContext', () => {
             const first  = new ScenarioContextPiece('first');
             const second = new ScenarioContextPiece('second');
 
-            context.put(first);
-            context.put(second);
+            context.add(first);
+            context.add(second);
 
             expect(Array.from(context)).toEqual([ second, first ]);
         });
@@ -25,7 +25,7 @@ describe('ScenarioContext', () => {
             const context = new ScenarioContext();
             const piece = new ScenarioContextPiece('a value');
 
-            expect(context.put(piece)).toBe(piece);
+            expect(context.add(piece)).toBe(piece);
         });
     });
 
@@ -37,9 +37,9 @@ describe('ScenarioContext', () => {
             const second = new ScenarioContextPiece('second');
             const third  = new ScenarioContextPiece('third');
 
-            context.put(first);
-            context.put(second);
-            context.put(third);
+            context.add(first);
+            context.add(second);
+            context.add(third);
 
             expect(Array.from(context)).toEqual([ third, second, first ]);
         });
@@ -49,8 +49,8 @@ describe('ScenarioContext', () => {
             const first  = new ScenarioContextPiece('first');
             const second = new ScenarioContextPiece('second');
 
-            context.put(first);
-            context.put(second);
+            context.add(first);
+            context.add(second);
 
             const collected: ScenarioContextPiece[] = [];
             for (const piece of context) {
@@ -70,9 +70,9 @@ describe('ScenarioContext', () => {
             const second = new ScenarioContextPiece('second');
             const third  = new ScenarioContextPiece('third');
 
-            context.put(first);
-            context.put(second);
-            context.put(third);
+            context.add(first);
+            context.add(second);
+            context.add(third);
 
             context.putOnTop(first);
 
@@ -84,8 +84,8 @@ describe('ScenarioContext', () => {
             const first  = new ScenarioContextPiece('first');
             const second = new ScenarioContextPiece('second');
 
-            context.put(first);
-            context.put(second);
+            context.add(first);
+            context.add(second);
 
             context.putOnTop(second);
 
