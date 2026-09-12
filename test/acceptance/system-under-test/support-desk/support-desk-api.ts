@@ -32,8 +32,21 @@ interface NewTicket {
  * caller pick them. Anything that wants a human-readable way to refer back
  * to a ticket has to keep its own record of which id that was - which is
  * exactly what `UseScenarioContext` is for.
+ *
+ * There's a single instance of this class, shared across every scenario -
+ * `instance()` always returns the same one - the same way a real support
+ * desk would keep its tickets in one backend, not spin up a fresh one per
+ * test. Tickets raised in one scenario are still there in the next, which
+ * is what makes referring to them by id, rather than by position, actually
+ * matter.
  */
 export class SupportDeskApi implements HttpApi {
+
+    private static readonly shared = new SupportDeskApi();
+
+    static instance(): SupportDeskApi {
+        return SupportDeskApi.shared;
+    }
 
     private readonly tickets = new Map<string, TicketRepresentation>();
 

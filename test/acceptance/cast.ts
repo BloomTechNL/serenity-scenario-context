@@ -10,7 +10,7 @@ export class SupportDeskCast implements Cast {
     prepare(actor: Actor): Actor {
         return actor.whoCan(
             UseScenarioContext.using(this.scenarioContext),
-            UseSupportDeskApi.using(new SupportDeskApi()),
+            UseSupportDeskApi.using(SupportDeskApi.instance()),
         );
     }
 }
