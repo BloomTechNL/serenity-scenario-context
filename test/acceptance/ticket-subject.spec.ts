@@ -2,7 +2,7 @@ import { actorCalled } from '@serenity-js/core';
 import { Ensure, equals, property } from '@serenity-js/assertions';
 
 import { raiseTicket } from './interactions/RaiseTicket';
-import { rememberedTicket, ticket } from './questions/Ticket';
+import { expectedTicket, ticket } from './questions/Ticket';
 import { SupportDeskActors } from './Actors';
 
 describe('A support agent using the scenario context', () => {
@@ -21,7 +21,7 @@ describe('A support agent using the scenario context', () => {
         await priya.attemptsTo(
             Ensure.that(
                 ticket().subject,
-                equals(rememberedTicket().subject),
+                equals(expectedTicket().subject),
             ),
         );
     });

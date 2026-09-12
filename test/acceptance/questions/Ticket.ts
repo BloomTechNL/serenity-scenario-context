@@ -24,7 +24,7 @@ export function ticket(label?: string) {
     });
 }
 
-export function rememberedTicket(label?: string) {
+export function expectedTicket(label?: string) {
     const description = label ? `remembered ticket labelled ${ label }` : 'the remembered ticket in the spotlight';
 
     return Question.about(description, actor => {
