@@ -16,6 +16,16 @@ describe('A support agent using the scenario context', () => {
 
     it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
         await chidi.attemptsTo(
+            raiseTicket(),
+        );
+
+        await chidi.attemptsTo(
+            Ensure.that(ticket().status, equals('open'))
+        );
+    });
+
+    it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
+        await chidi.attemptsTo(
             raiseTicket({ label: 'billing' }),
             raiseTicket({ label: 'login' }),
 
