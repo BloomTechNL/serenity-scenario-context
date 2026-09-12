@@ -2,6 +2,7 @@ import {Interaction} from '@serenity-js/core';
 
 import {UseScenarioContext} from '../../../src/index';
 import {TicketRepresentation} from '../system-under-test/index';
+import {TestIdentificationContext} from '../test-identification-context';
 import {UseSupportDeskApi} from '../use-support-desk-api';
 import {TicketContext} from "./ticket-context";
 
@@ -23,9 +24,10 @@ export const raiseTicket = (details: {
     label?: string;
     priority?: TicketPriority;
 } = {}) => {
-    const subject = randomSubject();
-
     return Interaction.where(`#actor raises a ticket`, actor => {
+        const testId = UseScenarioContext.as(actor).withType(TestIdentificationContext).findOne().id;
+        const subject = `${ randomSubject() } [${ testId }]`;
+
         const response = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {
             subject,
             priority: details.priority,
