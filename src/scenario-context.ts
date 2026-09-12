@@ -1,4 +1,4 @@
-import { ScenarioContextPiece } from './ScenarioContextPiece';
+import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
  * Holds the {@link ScenarioContextPiece} objects recorded during a scenario,

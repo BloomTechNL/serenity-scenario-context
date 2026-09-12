@@ -1,6 +1,6 @@
-import { Constructor } from './Constructor';
-import { ScenarioContext } from './ScenarioContext';
-import { ScenarioContextPiece } from './ScenarioContextPiece';
+import { Constructor } from './constructor';
+import { ScenarioContext } from './scenario-context';
+import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
  * Searches a {@link ScenarioContext} for pieces whose value is an instance

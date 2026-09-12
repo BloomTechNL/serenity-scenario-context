@@ -1,9 +1,9 @@
 import { Ability } from '@serenity-js/core';
 
-import { Constructor } from './Constructor';
-import { ScenarioContext } from './ScenarioContext';
-import { ScenarioContextPiece } from './ScenarioContextPiece';
-import { ScenarioContextSearcher } from './ScenarioContextSearcher';
+import { Constructor } from './constructor';
+import { ScenarioContext } from './scenario-context';
+import { ScenarioContextPiece } from './scenario-context-piece';
+import { ScenarioContextSearcher } from './scenario-context-searcher';
 
 /**
  * An {@link https://serenity-js.org/api/core/class/Ability/ | Ability} that

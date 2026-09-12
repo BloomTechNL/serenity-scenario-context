@@ -2,9 +2,9 @@ import { Question } from '@serenity-js/core';
 
 import { UseScenarioContext } from '../../../src/index';
 import { TicketRepresentation } from '../system-under-test/index';
-import { UseSupportDeskApi } from '../UseSupportDeskApi';
-import { TicketPriority, TicketStatus } from '../interactions/RaiseTicket';
-import {TicketContext} from "../interactions/TicketContext";
+import { UseSupportDeskApi } from '../use-support-desk-api';
+import { TicketPriority, TicketStatus } from '../interactions/raise-ticket';
+import {TicketContext} from "../interactions/ticket-context";
 
 export function ticket(label?: string) {
     const description = label ? `ticket labelled ${ label }` : 'the ticket in the spotlight';

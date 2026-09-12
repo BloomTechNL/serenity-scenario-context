@@ -1,3 +1,3 @@
-export * from './ErrorRepresentation';
-export * from './HttpApi';
-export * from './HttpResponse';
+export * from './error-representation';
+export * from './http-api';
+export * from './http-response';

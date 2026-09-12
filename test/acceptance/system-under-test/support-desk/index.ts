@@ -1,1 +1,1 @@
-export * from './SupportDeskApi';
+export * from './support-desk-api';

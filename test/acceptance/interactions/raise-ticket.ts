@@ -2,8 +2,8 @@ import {Interaction} from '@serenity-js/core';
 
 import {UseScenarioContext} from '../../../src/index';
 import {TicketRepresentation} from '../system-under-test/index';
-import {UseSupportDeskApi} from '../UseSupportDeskApi';
-import {TicketContext} from "./TicketContext";
+import {UseSupportDeskApi} from '../use-support-desk-api';
+import {TicketContext} from "./ticket-context";
 
 export type TicketStatus = 'open' | 'resolved';
 export type TicketPriority = 'normal' | 'urgent';

@@ -1,5 +1,5 @@
-import { ErrorRepresentation } from './ErrorRepresentation';
-import { HttpResponse } from './HttpResponse';
+import { ErrorRepresentation } from './error-representation';
+import { HttpResponse } from './http-response';
 
 /**
  * An HTTP-like API: something a caller can `get` from and `post` to, the
