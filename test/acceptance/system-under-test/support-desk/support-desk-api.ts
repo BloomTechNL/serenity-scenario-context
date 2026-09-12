@@ -38,7 +38,8 @@ interface NewTicket {
  * desk would keep its tickets in one backend, not spin up a fresh one per
  * test. Tickets raised in one scenario are still there in the next, which
  * is what makes referring to them by id, rather than by position, actually
- * matter.
+ * matter - and why anything searching by subject needs to be specific
+ * enough to tell its own tickets apart from everyone else's.
  */
 export class SupportDeskApi implements HttpApi {
 
@@ -59,16 +60,22 @@ export class SupportDeskApi implements HttpApi {
     }
 
     private route(path: string, body?: unknown): HttpResponse<unknown> {
-        const ticket = /^\/tickets\/([^/]+)$/.exec(path);
+        const { pathname, searchParams } = new URL(path, 'http://localhost');
+
+        if (pathname === '/tickets/search') {
+            return this.searchTicketsBySubject(searchParams.get('subject'), searchParams.get('testId'));
+        }
+
+        const ticket = /^\/tickets\/([^/]+)$/.exec(pathname);
         if (ticket) {
             return this.found(this.tickets.get(decodeURIComponent(ticket[1])), `No ticket with id ${ ticket[1] }`);
         }
 
-        if (path === '/tickets') {
+        if (pathname === '/tickets') {
             return this.createTicket(body as NewTicket);
         }
 
-        const resolveTicket = /^\/tickets\/([^/]+)\/resolve$/.exec(path);
+        const resolveTicket = /^\/tickets\/([^/]+)\/resolve$/.exec(pathname);
         if (resolveTicket) {
             return this.resolveTicket(decodeURIComponent(resolveTicket[1]));
         }
@@ -87,6 +94,36 @@ export class SupportDeskApi implements HttpApi {
         this.tickets.set(ticket.id, ticket);
 
         return { status: 201, body: ticket };
+    }
+
+    /**
+     * A case-insensitive, "contains" search over every ticket's subject -
+     * not an exact match - the same way a support agent would search a real
+     * helpdesk: by whatever part of the subject they remember, not the
+     * whole thing verbatim.
+     *
+     * `testId`, when given, narrows the search down further to tickets
+     * whose subject also contains it. It's a second, independent "contains"
+     * check rather than something folded into `subject`, so a caller can
+     * search by any fragment of the subject - not just one that happens to
+     * sit right next to the test id - and still only ever see tickets
+     * raised by its own scenario, not ones left behind by every other
+     * scenario sharing this same, singleton backend.
+     */
+    private searchTicketsBySubject(
+        subject: string | null,
+        testId: string | null,
+    ): HttpResponse<TicketRepresentation[] | ErrorRepresentation> {
+        if (! subject) {
+            return { status: 400, body: { error: 'A ticket search needs a subject to search for' } };
+        }
+
+        const needle = subject.toLowerCase();
+        const matches = [ ...this.tickets.values() ].filter(ticket =>
+            ticket.subject.toLowerCase().includes(needle) && (! testId || ticket.subject.includes(testId)),
+        );
+
+        return { status: 200, body: matches };
     }
 
     private resolveTicket(id: string): HttpResponse<TicketRepresentation | ErrorRepresentation> {
