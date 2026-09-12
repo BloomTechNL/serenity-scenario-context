@@ -5,13 +5,12 @@ import { SupportDeskApi } from './system-under-test/index';
 import { UseSupportDeskApi } from './UseSupportDeskApi';
 
 export class SupportDeskCast implements Cast {
-
-    private readonly api = new SupportDeskApi();
+    private readonly scenarioContext = new ScenarioContext();
 
     prepare(actor: Actor): Actor {
         return actor.whoCan(
-            UseScenarioContext.using(new ScenarioContext()),
-            UseSupportDeskApi.using(this.api),
+            UseScenarioContext.using(this.scenarioContext),
+            UseSupportDeskApi.using(new SupportDeskApi()),
         );
     }
 }
