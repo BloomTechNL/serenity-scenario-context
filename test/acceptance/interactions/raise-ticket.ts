@@ -20,13 +20,23 @@ function randomSubject(): string {
     return PLACEHOLDER_SUBJECTS[Math.floor(Math.random() * PLACEHOLDER_SUBJECTS.length)];
 }
 
+/**
+ * Raises a ticket, defaulting to a random placeholder subject when
+ * `details.subject` isn't given.
+ *
+ * Either way, this scenario's own test id is always appended to the
+ * subject - there's no option to opt out of it - which is what lets
+ * `numberOfTicketsFound` search this ticket back out without tripping over
+ * ones other scenarios left behind in the shared, singleton `SupportDeskApi`.
+ */
 export const raiseTicket = (details: {
     label?: string;
     priority?: TicketPriority;
+    subject?: string;
 } = {}) => {
     return Interaction.where(`#actor raises a ticket`, actor => {
         const testId = UseScenarioContext.as(actor).withType(TestIdentificationContext).findOne().id;
-        const subject = `${ randomSubject() } [${ testId }]`;
+        const subject = `${ details.subject ?? randomSubject() } [${ testId }]`;
 
         const response = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {
             subject,
