@@ -4,7 +4,7 @@ import { Ensure, equals, property } from '@serenity-js/assertions';
 import { raiseTicket } from './interactions/raise-ticket';
 import { resolveTicket } from './interactions/resolve-ticket';
 import { ticket } from './questions/ticket';
-import { setUpAccount } from './tasks/set-up-account';
+import { setUp } from './tasks/set-up';
 import { SupportDeskCast } from './cast';
 
 describe('A support agent using the scenario context', () => {
@@ -17,7 +17,7 @@ describe('A support agent using the scenario context', () => {
 
     it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
         await chidi.attemptsTo(
-            setUpAccount(),
+            setUp(),
 
             raiseTicket(),
         );
@@ -29,7 +29,7 @@ describe('A support agent using the scenario context', () => {
 
     it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
         await chidi.attemptsTo(
-            setUpAccount(),
+            setUp(),
 
             raiseTicket({ label: 'billing' }),
             raiseTicket({ label: 'login' }),
@@ -45,7 +45,7 @@ describe('A support agent using the scenario context', () => {
 
     it('resolves a ticket by label, leaving an earlier one untouched', async () => {
         await chidi.attemptsTo(
-            setUpAccount(),
+            setUp(),
 
             raiseTicket({ label: 'first-ticket' }),
             raiseTicket({}),
