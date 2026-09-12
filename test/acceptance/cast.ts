@@ -7,14 +7,12 @@ import { SupportDeskApi } from './system-under-test/index';
 import { TestIdentificationContext } from './test-identification-context';
 import { UseSupportDeskApi } from './use-support-desk-api';
 
-function newContext(): ScenarioContext {
-    const result = new ScenarioContext();
-    result.add(new ScenarioContextPiece(TestIdentificationContext.random()));
-    return result;
-}
-
 export class SupportDeskCast implements Cast {
-    private readonly scenarioContext = newContext();
+    private readonly scenarioContext = new ScenarioContext();
+
+    public constructor() {
+        this.scenarioContext.add(new ScenarioContextPiece(TestIdentificationContext.random()));
+    }
 
     prepare(actor: Actor): Actor {
         return actor.whoCan(
