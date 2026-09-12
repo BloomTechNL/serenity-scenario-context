@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Interaction } from '@serenity-js/core';
 
 import { UseScenarioContext } from '../../../../src';
@@ -8,19 +10,41 @@ export type TicketStatus = 'open' | 'resolved';
 export type TicketPriority = 'normal' | 'urgent';
 
 /**
+ * A few generic placeholders `raiseTicket` picks from at random when no
+ * `subject` is given - a spec that doesn't care what a ticket is about
+ * shouldn't have to invent something plausible-sounding for it.
+ */
+const PLACEHOLDER_SUBJECTS = [
+    'Something needs looking into',
+    'Please take a look at this',
+    'Having some trouble here',
+    'This does not seem right',
+];
+
+function randomSubject(): string {
+    return PLACEHOLDER_SUBJECTS[Math.floor(Math.random() * PLACEHOLDER_SUBJECTS.length)];
+}
+
+/**
  * The details needed to raise a new ticket - a plain shape, not a piece of
  * context. Specs describe *what* to raise; how a raised ticket ends up
  * represented on the scenario context is this module's business.
  *
- * There's no `id` here: the system under test assigns that itself. `label`
- * is this scenario's own, human-readable name for the ticket - never sent
- * to the system, only used to qualify it in the scenario context - so a
- * spec can keep saying "billing", never having to know or repeat the real,
- * system-assigned id.
+ * Every field is optional, and `raiseTicket` fills in whatever's missing:
+ * `label` and `subject` are randomly generated, `priority` defaults to
+ * `'normal'`. That makes it just as easy to raise "some ticket or other",
+ * when a scenario needs one to exist but doesn't care about its details, as
+ * it is to raise a specific one, fully spelled out.
+ *
+ * There's no `id` here regardless: the system under test assigns that
+ * itself. `label` is this scenario's own, human-readable name for the
+ * ticket - never sent to the system, only used to qualify it in the
+ * scenario context - so a spec can keep saying "billing", never having to
+ * know or repeat the real, system-assigned id.
  */
 export interface TicketDetails {
-    label: string;
-    subject: string;
+    label?: string;
+    subject?: string;
     priority?: TicketPriority;
 }
 
@@ -76,18 +100,27 @@ export class Ticket {
  * context, qualified by its human-readable label and, if applicable, its
  * priority, which puts it "in the spotlight" - on top of the scenario
  * context.
+ *
+ * `label` and `subject` are generated up front, as soon as `raiseTicket` is
+ * called, rather than when the interaction is later performed - so the
+ * ticket this interaction describes and the one it actually raises are
+ * always the same one, however it's reported.
  */
-export const raiseTicket = (details: TicketDetails) =>
-    Interaction.where(`#actor raises a ticket labelled ${ details.label }: ${ details.subject }`, actor => {
+export const raiseTicket = (details: TicketDetails = {}) => {
+    const label = details.label ?? randomUUID();
+    const subject = details.subject ?? randomSubject();
+
+    return Interaction.where(`#actor raises a ticket labelled ${ label }: ${ subject }`, actor => {
         const representation = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {
-            subject: details.subject,
+            subject,
             priority: details.priority,
         });
 
-        const raised = Ticket.fromRepresentation(representation, details.label);
+        const raised = Ticket.fromRepresentation(representation, label);
         const qualifiers = raised.priority === 'urgent'
             ? [ raised.label, 'urgent' ]
             : [ raised.label ];
 
         UseScenarioContext.as(actor).add(raised, ...qualifiers);
     });
+};

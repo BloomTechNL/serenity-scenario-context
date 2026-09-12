@@ -1,4 +1,4 @@
-import { UsesAbilities } from '@serenity-js/core';
+import { Question } from '@serenity-js/core';
 
 import { UseScenarioContext } from '../../../../src';
 import { TicketRepresentation } from '../../../../system-under-test';
@@ -26,19 +26,27 @@ export interface TicketSnapshot {
  * `findLastUsed` is used rather than `findOne`: resolving a ticket re-tags
  * it rather than replacing it, so more than one piece may by now be
  * qualified by the same label.
+ *
+ * A real `Question`, like anywhere else in Serenity/JS: the actor asking it
+ * is supplied by whatever resolves it - `Ensure.that`, in this spec - not
+ * passed in here directly.
  */
-export function ticket(actor: UsesAbilities, label?: string): TicketSnapshot {
-    const searcher = UseScenarioContext.as(actor).withType(Ticket);
+export function ticket(label?: string) {
+    const description = label ? `ticket labelled ${ label }` : 'the ticket in the spotlight';
 
-    const found = label
-        ? searcher.withQualifiers(label).findLastUsed()
-        : searcher.findLastUsed();
+    return Question.about(description, actor => {
+        const searcher = UseScenarioContext.as(actor).withType(Ticket);
 
-    const representation = UseSupportDeskApi.as(actor).get<TicketRepresentation>(`/tickets/${ found.id }`);
+        const found = label
+            ? searcher.withQualifiers(label).findLastUsed()
+            : searcher.findLastUsed();
 
-    return {
-        subject: representation.subject,
-        priority: representation.priority,
-        status: representation.status,
-    };
+        const representation = UseSupportDeskApi.as(actor).get<TicketRepresentation>(`/tickets/${ found.id }`);
+
+        return {
+            subject: representation.subject,
+            priority: representation.priority,
+            status: representation.status,
+        };
+    });
 }

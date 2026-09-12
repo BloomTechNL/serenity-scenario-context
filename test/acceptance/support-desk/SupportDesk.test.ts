@@ -1,5 +1,5 @@
 import { actorCalled, engage } from '@serenity-js/core';
-import { Ensure, equals } from '@serenity-js/assertions';
+import { Ensure, equals, property } from '@serenity-js/assertions';
 
 import { raiseTicket } from './interactions/Raise';
 import { resolveTicket } from './interactions/Resolve';
@@ -14,15 +14,15 @@ describe('A support agent using the scenario context', () => {
         const chidi = actorCalled('Chidi');
 
         await chidi.attemptsTo(
-            raiseTicket({ label: 'billing', subject: 'Invoice looks wrong' }),
-            raiseTicket({ label: 'login', subject: 'Cannot log in', priority: 'urgent' }),
+            raiseTicket({ label: 'billing' }),
+            raiseTicket({ label: 'login' }),
 
             resolveTicket('billing'),
         );
 
         await chidi.attemptsTo(
-            Ensure.that(ticket(chidi, 'billing'), equals({ subject: 'Invoice looks wrong', priority: 'normal', status: 'resolved' })),
-            Ensure.that(ticket(chidi, 'login'), equals({ subject: 'Cannot log in', priority: 'urgent', status: 'open' })),
+            Ensure.that(ticket('billing'), property('status', equals('resolved'))),
+            Ensure.that(ticket('login'), property('status', equals('open'))),
         );
     });
 });
