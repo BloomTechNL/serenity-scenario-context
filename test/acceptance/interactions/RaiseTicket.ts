@@ -21,10 +21,9 @@ function randomSubject(): string {
 
 export const raiseTicket = (details: {
     label?: string;
-    subject?: string;
     priority?: TicketPriority;
 } = {}) => {
-    const subject = details.subject ?? randomSubject();
+    const subject = randomSubject();
 
     return Interaction.where(`#actor raises a ticket`, actor => {
         const response = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {

@@ -23,3 +23,17 @@ export function ticket(label?: string) {
         };
     });
 }
+
+export function rememberedTicket(label?: string) {
+    const description = label ? `remembered ticket labelled ${ label }` : 'the remembered ticket in the spotlight';
+
+    return Question.about(description, actor => {
+        const qualifiers = label ? [label] : [];
+
+        const found = UseScenarioContext.as(actor).withType(TicketContext).withQualifiers(...qualifiers).findLastUsed();
+
+        return {
+            subject: found.subject,
+        };
+    });
+}
