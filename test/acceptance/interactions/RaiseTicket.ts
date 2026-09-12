@@ -1,10 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import {Interaction} from '@serenity-js/core';
 
-import { Interaction } from '@serenity-js/core';
-
-import { UseScenarioContext } from '../../../src/index';
-import { TicketRepresentation } from '../system-under-test/index';
-import { UseSupportDeskApi } from '../UseSupportDeskApi';
+import {UseScenarioContext} from '../../../src/index';
+import {TicketRepresentation} from '../system-under-test/index';
+import {UseSupportDeskApi} from '../UseSupportDeskApi';
+import {TicketContext} from "./TicketContext";
 
 export type TicketStatus = 'open' | 'resolved';
 export type TicketPriority = 'normal' | 'urgent';
@@ -20,22 +19,11 @@ function randomSubject(): string {
     return PLACEHOLDER_SUBJECTS[Math.floor(Math.random() * PLACEHOLDER_SUBJECTS.length)];
 }
 
-export interface TicketDetails {
+export const raiseTicket = (details: {
     label?: string;
     subject?: string;
     priority?: TicketPriority;
-}
-
-export class TicketContext {
-
-    constructor(
-        public readonly id: string,
-        public readonly subject: string,
-    ) {
-    }
-}
-
-export const raiseTicket = (details: TicketDetails = {}) => {
+} = {}) => {
     const subject = details.subject ?? randomSubject();
 
     return Interaction.where(`#actor raises a ticket`, actor => {
