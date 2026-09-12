@@ -63,9 +63,10 @@ await actorCalled('Alice')
 - `test/acceptance/support-desk` - a runnable, end-to-end example: a fake
   "support desk" domain driven through a real Serenity/JS actor. Read it as
   a worked example of the ability; run it as a regression test. Currently
-  just the one scenario - an agent raises a couple of tickets and resolves
-  one by label, even though a later one is in the spotlight - kept
-  deliberately small; more can be added the same way.
+  two small scenarios - an agent raises a couple of tickets and resolves
+  one by label, either the one in the spotlight or the earlier one, leaving
+  the other untouched either way - kept deliberately small; more can be
+  added the same way.
 
   `raiseTicket` and `resolveTicket` - the "interactions" - are real
   Serenity/JS `Interaction`s, built with `Interaction.where(...)` and

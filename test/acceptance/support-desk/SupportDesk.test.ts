@@ -25,4 +25,20 @@ describe('A support agent using the scenario context', () => {
             Ensure.that(ticket('login'), property('status', equals('open'))),
         );
     });
+
+    it('resolves a ticket by label, leaving an earlier one untouched', async () => {
+        const farida = actorCalled('Farida');
+
+        await farida.attemptsTo(
+            raiseTicket({ label: 'first-ticket' }),
+            raiseTicket({}),
+
+            resolveTicket(),
+        );
+
+        await farida.attemptsTo(
+            Ensure.that(ticket(), property('status', equals('resolved'))),
+            Ensure.that(ticket('first-ticket'), property('status', equals('open'))),
+        );
+    });
 });
