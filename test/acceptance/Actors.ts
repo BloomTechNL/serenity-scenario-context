@@ -1,7 +1,7 @@
 import { Actor, Cast } from '@serenity-js/core';
 
-import { ScenarioContext, UseScenarioContext } from '../../../src';
-import { SupportDeskApi } from '../../../system-under-test';
+import { ScenarioContext, UseScenarioContext } from '../../src/index';
+import { SupportDeskApi } from './system-under-test/index';
 import { UseSupportDeskApi } from './UseSupportDeskApi';
 
 /**

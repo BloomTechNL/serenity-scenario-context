@@ -11,5 +11,5 @@
  * and only then decide what, if anything, is worth remembering in the
  * actor's own {@link ../src/ScenarioContext | ScenarioContext}.
  */
-export * from './http';
-export * from './support-desk';
+export * from './http/index';
+export * from './support-desk/index';

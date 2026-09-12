@@ -8,10 +8,10 @@ import { SupportDeskActors } from './Actors';
 
 describe('A support agent using the scenario context', () => {
 
-    let chidi: Actor;
+    let chidi = actorCalled('Chidi');
 
     beforeEach(() => {
-        chidi = new SupportDeskActors().prepare(actorCalled('Chidi'));
+        new SupportDeskActors().prepare(chidi);
     });
 
     it('resolves a ticket by label, even when a later one is in the spotlight', async () => {

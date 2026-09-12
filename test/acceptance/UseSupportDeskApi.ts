@@ -1,6 +1,6 @@
 import { Ability } from '@serenity-js/core';
 
-import { ErrorRepresentation, HttpApi, HttpResponse } from '../../../system-under-test';
+import { ErrorRepresentation, HttpApi, HttpResponse } from './system-under-test/index';
 
 /**
  * An `Ability` that lets a Serenity/JS actor talk to the fake

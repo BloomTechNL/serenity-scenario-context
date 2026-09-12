@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { ErrorRepresentation, HttpApi, HttpResponse } from '../http';
+import { ErrorRepresentation, HttpApi, HttpResponse } from '../http/index';
 
 export type TicketStatus = 'open' | 'resolved';
 export type TicketPriority = 'normal' | 'urgent';

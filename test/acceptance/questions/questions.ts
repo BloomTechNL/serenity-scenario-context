@@ -1,7 +1,7 @@
 import { Question } from '@serenity-js/core';
 
-import { UseScenarioContext } from '../../../../src';
-import { TicketRepresentation } from '../../../../system-under-test';
+import { UseScenarioContext } from '../../../src/index';
+import { TicketRepresentation } from '../system-under-test/index';
 import { UseSupportDeskApi } from '../UseSupportDeskApi';
 import { Ticket, TicketPriority, TicketStatus } from '../interactions/Raise';
 
