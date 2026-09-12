@@ -3,14 +3,14 @@ import { Ensure, equals, property } from '@serenity-js/assertions';
 
 import { raiseTicket } from './interactions/RaiseTicket';
 import { expectedTicket, ticket } from './questions/Ticket';
-import { SupportDeskActors } from './Actors';
+import { SupportDeskCast } from './Actors';
 
 describe('A support agent using the scenario context', () => {
 
     let priya = actorCalled('Priya');
 
     beforeEach(() => {
-        new SupportDeskActors().prepare(priya);
+        new SupportDeskCast().prepare(priya);
     });
 
     it('remembers the subject of a raised ticket, matching what the system under test has on record', async () => {

@@ -4,14 +4,7 @@ import { ScenarioContext, UseScenarioContext } from '../../src/index';
 import { SupportDeskApi } from './system-under-test/index';
 import { UseSupportDeskApi } from './UseSupportDeskApi';
 
-/**
- * Every actor in the support desk scenario gets their own, empty
- * `ScenarioContext` to work with - just like a real support agent, they
- * don't share their notes with their colleagues. They do all work against
- * the same fake support desk system, though - just as real support agents
- * would all be calling the same backend.
- */
-export class SupportDeskActors implements Cast {
+export class SupportDeskCast implements Cast {
 
     private readonly api = new SupportDeskApi();
 

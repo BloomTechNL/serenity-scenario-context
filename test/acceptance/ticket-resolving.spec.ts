@@ -4,14 +4,14 @@ import { Ensure, equals, property } from '@serenity-js/assertions';
 import { raiseTicket } from './interactions/RaiseTicket';
 import { resolveTicket } from './interactions/ResolveTicket';
 import { ticket } from './questions/Ticket';
-import { SupportDeskActors } from './Actors';
+import { SupportDeskCast } from './Actors';
 
 describe('A support agent using the scenario context', () => {
 
     let chidi = actorCalled('Chidi');
 
     beforeEach(() => {
-        new SupportDeskActors().prepare(chidi);
+        new SupportDeskCast().prepare(chidi);
     });
 
     it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
