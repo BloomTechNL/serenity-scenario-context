@@ -15,11 +15,21 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
     private readonly pieces: ScenarioContextPiece[] = [];
 
     /**
-     * Puts a new context piece on top of this context.
+     * Puts a new context piece on top of this context - either an
+     * already-constructed {@link ScenarioContextPiece}, or a plain value
+     * plus its qualifiers, exactly as {@link UseScenarioContext#add} accepts
+     * them, so adding directly to a `ScenarioContext` never needs anything
+     * that adding through the ability doesn't.
      *
      * @returns the piece that was put on top, for convenience.
      */
-    add<Value>(piece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value> {
+    add<Value>(piece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value>;
+    add<Value extends object>(value: Value, ...qualifiers: string[]): ScenarioContextPiece<Value>;
+    add<Value>(pieceOrValue: ScenarioContextPiece<Value> | Value, ...qualifiers: string[]): ScenarioContextPiece<Value> {
+        const piece = pieceOrValue instanceof ScenarioContextPiece
+            ? pieceOrValue
+            : new ScenarioContextPiece(pieceOrValue, qualifiers);
+
         this.pieces.unshift(piece);
 
         return piece;

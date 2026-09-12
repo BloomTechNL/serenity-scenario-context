@@ -69,7 +69,7 @@ export class UseScenarioContext extends Ability {
      *  convenience.
      */
     add<Value extends object>(value: Value, ...qualifiers: string[]): ScenarioContextPiece<Value> {
-        return this.scenarioContext.add(new ScenarioContextPiece(value, qualifiers));
+        return this.scenarioContext.add(value, ...qualifiers);
     }
 
     /**
