@@ -16,12 +16,8 @@ export const resolveTicket = (label?: string) =>
                 ? searcher.withQualifiers(label).findOne()
                 : searcher.findLastUsed();
 
-            const representation = UseSupportDeskApi.as(actor).post<TicketRepresentation>(
+            UseSupportDeskApi.as(actor).post<TicketRepresentation>(
                 `/tickets/${ ticket.id }/resolve`, undefined, 200,
             );
-            const resolved = TicketContext.fromRepresentation(representation);
-            const qualifiers = label ? [ label ] : [];
-
-            scenarioContext.add(resolved, ...qualifiers);
         },
     );
