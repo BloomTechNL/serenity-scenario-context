@@ -1,215 +1,80 @@
 import { actorCalled, engage } from '@serenity-js/core';
-import { Ensure, equals } from '@serenity-js/assertions';
+import { and, Ensure, equals, property } from '@serenity-js/assertions';
 
-import { Customer } from './domain/Customer';
-import { EmailAddress } from './domain/EmailAddress';
-import { HomeAddress } from './domain/HomeAddress';
-import { Ticket } from './domain/Ticket';
-import { Focus } from './interactions/Focus';
-import { Raise } from './interactions/Raise';
-import { Record } from './interactions/Record';
-import { Resolve } from './interactions/Resolve';
-import {
-    TheCustomerInTheSpotlight,
-    TheEmailAddressOf,
-    TheHomeAddressOf,
-    TheTicket,
-    TheTicketInTheSpotlight,
-} from './questions/questions';
-import { SharedDirectoryActors, SupportDeskActors } from './Actors';
+import { raiseTicket } from './interactions/Raise';
+import { resolveTicket } from './interactions/Resolve';
+import { ticketAsKnownToTheSystem, ticketIdentifiedBy } from './questions/questions';
+import { SupportDeskActors } from './Actors';
 
 /**
- * These acceptance tests double up as a worked example of the
+ * This acceptance test doubles up as a worked example of the
  * `UseScenarioContext` ability, exercised the way it's meant to be used:
  * through a Serenity/JS actor, in a fake "support desk" domain where an
  * agent juggles several customer tickets within one scenario.
  *
- * Note: every test below uses its own, never-repeated actor name. Serenity/
- * JS keeps actors around for the lifetime of the process and only prepares
- * an actor - i.e. assigns them the abilities granted by the current
- * `engage`d `Cast` - the first time they're referenced; official test
- * runner adapters (Mocha, Jasmine, Cucumber) reset that between scenarios
- * automatically, but this project's plain Jest setup doesn't. Reusing an
- * actor's name across tests would resurrect them with whatever ability (and
+ * `raiseTicket` and `resolveTicket` are real Serenity/JS `Interaction`s,
+ * performed via `attemptsTo` like any other; `ticketIdentifiedBy` and
+ * `ticketAsKnownToTheSystem` are plain functions instead, called directly
+ * once those interactions have completed. `Ticket` - the type that
+ * actually gets put on the scenario context - is deliberately never
+ * imported here: it's a piece of context, an implementation detail of the
+ * interaction/question functions that put it on and read it off it. This
+ * spec only ever deals in plain data: the details `raiseTicket` needs to
+ * raise a ticket, and the `Ensure`/`property` expectations checked against
+ * what the question functions return. Notably, that never includes a
+ * ticket's real id - the system under test assigns those (as UUIDs), so
+ * this spec only ever refers to a ticket by the human-readable `label` it
+ * gave it when raising it, the same way a support agent would say "the
+ * billing ticket" rather than recite its id, and never asserts on the id
+ * either, since it's not something this spec ever gets to choose.
+ *
+ * Note: this test uses its own, never-repeated actor name. Serenity/JS
+ * keeps actors around for the lifetime of the process and only prepares an
+ * actor - i.e. assigns them the abilities granted by the current `engage`d
+ * `Cast` - the first time they're referenced; official test runner adapters
+ * (Mocha, Jasmine, Cucumber) reset that between scenarios automatically,
+ * but this project's plain Jest setup doesn't. Reusing an actor's name
+ * across tests would resurrect them with whatever ability (and
  * however-populated a `ScenarioContext`) they were left with previously,
  * rather than a fresh one - which matters a lot once `findOne()` is used,
- * since it fails outright on any unexpected leftover match.
+ * since it fails outright on any unexpected leftover match. Should more
+ * tests be added here later, each will need its own actor name for the same
+ * reason.
  */
 describe('A support agent using the scenario context', () => {
 
     beforeEach(() => engage(new SupportDeskActors()));
 
-    it('keeps the most recently raised ticket in the spotlight', async () => {
-        const billing  = new Ticket('TICKET-1', 'Invoice looks wrong');
-        const login     = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
-        const feature   = new Ticket('TICKET-3', 'Please add dark mode');
+    it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
+        const chidi = actorCalled('Chidi');
 
-        await actorCalled('Amara').attemptsTo(
-            Raise.aTicket(billing),
-            Raise.aTicket(login),
-            Raise.aTicket(feature),
+        await chidi.attemptsTo(
+            raiseTicket({ label: 'billing', subject: 'Invoice looks wrong' }),
+            raiseTicket({ label: 'login', subject: 'Cannot log in', priority: 'urgent' }),  // login is now the ticket in the spotlight
 
-            Ensure.that(TheTicketInTheSpotlight(), equals(feature)),
-        );
-    });
-
-    it('lets the agent switch their attention back to an earlier ticket', async () => {
-        const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
-        const login    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
-
-        await actorCalled('Bilal').attemptsTo(
-            Raise.aTicket(billing),
-            Raise.aTicket(login),           // login is now in the spotlight
-
-            Focus.onTheTicket('TICKET-1'),  // explicitly recall billing...
-
-            Ensure.that(TheTicketInTheSpotlight(), equals(billing)),  // ...it's back in the spotlight
-        );
-    });
-
-    it('resolves whichever ticket is currently in the spotlight', async () => {
-        const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
-        const login    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
-
-        await actorCalled('Chidi').attemptsTo(
-            Raise.aTicket(billing),
-            Raise.aTicket(login),
-
-            Focus.onTheTicket('TICKET-1'),
-            Resolve.theTicketInTheSpotlight(),
-
-            Ensure.that(TheTicket.identifiedBy('TICKET-1'), equals(billing)),
+            resolveTicket('billing'),    // ...but billing gets resolved anyway
         );
 
-        expect(billing.status).toEqual('resolved');
-        expect(login.status).toEqual('open');
-    });
+        await chidi.attemptsTo(
+            // the scenario context remembers the resolved ticket...
+            Ensure.that(ticketIdentifiedBy(chidi, 'billing'), and(
+                property('subject', equals('Invoice looks wrong')),
+                property('priority', equals('normal')),
+                property('status', equals('resolved')),
+            )),
 
-    it('finds a ticket by a qualifier other than its id, regardless of where it sits in the context', async () => {
-        const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
-        const login    = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
-        const feature  = new Ticket('TICKET-3', 'Please add dark mode');
-
-        await actorCalled('Diana').attemptsTo(
-            Raise.aTicket(billing),
-            Raise.aTicket(login),    // the only ticket qualified 'urgent'
-            Raise.aTicket(feature),  // now on top, but not urgent
-
-            Ensure.that(TheTicket.thatIsUrgent(), equals(login)),
-
-            // finding it also brought it back into the spotlight
-            Ensure.that(TheTicketInTheSpotlight(), equals(login)),
+            // ...and so does the system it was raised against - proof that
+            // resolveTicket changed more than just the actor's own notes
+            Ensure.that(ticketAsKnownToTheSystem(chidi, 'billing'), and(
+                property('subject', equals('Invoice looks wrong')),
+                property('priority', equals('normal')),
+                property('status', equals('resolved')),
+            )),
+            Ensure.that(ticketAsKnownToTheSystem(chidi, 'login'), and(
+                property('subject', equals('Cannot log in')),
+                property('priority', equals('urgent')),
+                property('status', equals('open')),
+            )),
         );
-    });
-
-    it('tells apart different types of context pieces, even without qualifiers', async () => {
-        const login = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
-        const bob    = new Customer('Bob');
-
-        await actorCalled('Ezra').attemptsTo(
-            Raise.aTicket(login),
-            Raise.aCustomer(bob),  // bob is now on top of the context
-
-            // a search for a Ticket isn't confused by the Customer on top
-            Ensure.that(TheTicketInTheSpotlight(), equals(login)),
-            Ensure.that(TheCustomerInTheSpotlight(), equals(bob)),
-        );
-    });
-
-    it('keeps each actor’s scenario context separate from every other actor’s', async () => {
-        const faridasTicket = new Ticket('TICKET-1', 'Invoice looks wrong');
-        const gabrielsTicket = new Ticket('TICKET-2', 'Cannot log in', 'urgent');
-
-        await actorCalled('Farida').attemptsTo(
-            Raise.aTicket(faridasTicket),
-        );
-
-        await actorCalled('Gabriel').attemptsTo(
-            Raise.aTicket(gabrielsTicket),
-
-            Ensure.that(TheTicketInTheSpotlight(), equals(gabrielsTicket)),
-        );
-
-        await actorCalled('Farida').attemptsTo(
-            Ensure.that(TheTicketInTheSpotlight(), equals(faridasTicket)),
-        );
-    });
-
-    it('complains when no ticket matches the requested qualifiers', async () => {
-        await expect(
-            actorCalled('Hiro').attemptsTo(
-                Raise.aTicket(new Ticket('TICKET-1', 'Invoice looks wrong')),
-
-                Focus.onTheTicket('TICKET-404'),
-            )
-        ).rejects.toThrow('Could not find Ticket qualified by TICKET-404 in the scenario context');
-    });
-
-    it('insists on a single match when refocusing by id, complaining if history makes that ambiguous', async () => {
-        const billing = new Ticket('TICKET-1', 'Invoice looks wrong');
-
-        await expect(
-            actorCalled('Imani').attemptsTo(
-                Raise.aTicket(billing),
-                Resolve.theTicketInTheSpotlight(),  // re-tags billing, but its original 'TICKET-1'-qualified piece is still there too
-
-                Focus.onTheTicket('TICKET-1'),      // now ambiguous: two pieces are qualified 'TICKET-1'
-            )
-        ).rejects.toThrow(
-            'Found 2 instances of Ticket qualified by TICKET-1 in the scenario context, expected exactly one. '
-            + 'Use findLastUsed() instead if the most recently used one will do.'
-        );
-    });
-});
-
-/**
- * A second flavour of the same ability: several actors sharing a single
- * `ScenarioContext` (see `SharedDirectoryActors`), using it as a small
- * contact directory. Both a `HomeAddress` and an `EmailAddress` are stored
- * per actor, told apart purely by qualifying each piece with the name of
- * the actor it belongs to.
- *
- * As above, every actor name here (Priya, Tomasz, Farah) is unique across
- * the whole file - see the note above the first `describe` for why.
- */
-describe('Several actors sharing a scenario context as a contact directory', () => {
-
-    beforeEach(() => engage(new SharedDirectoryActors()));
-
-    it('lets an actor look up a colleague’s contact details by name, even though they never recorded them', async () => {
-        const priyasHomeAddress  = new HomeAddress('12 Baker Street, London');
-        const priyasEmailAddress = new EmailAddress('priya@example.org');
-        const tomaszsHomeAddress  = new HomeAddress('221B Baker Street, London');
-        const tomaszsEmailAddress = new EmailAddress('tomasz@example.org');
-
-        await actorCalled('Priya').attemptsTo(
-            Record.contactDetailsOf('Priya', priyasHomeAddress, priyasEmailAddress),
-        );
-
-        await actorCalled('Tomasz').attemptsTo(
-            Record.contactDetailsOf('Tomasz', tomaszsHomeAddress, tomaszsEmailAddress),
-
-            // Tomasz can look up Priya's details, qualified by her name...
-            Ensure.that(TheHomeAddressOf('Priya'), equals(priyasHomeAddress)),
-            Ensure.that(TheEmailAddressOf('Priya'), equals(priyasEmailAddress)),
-
-            // ...as well as his own, even though both are the same type of object
-            Ensure.that(TheHomeAddressOf('Tomasz'), equals(tomaszsHomeAddress)),
-            Ensure.that(TheEmailAddressOf('Tomasz'), equals(tomaszsEmailAddress)),
-        );
-    });
-
-    it('complains when nobody by that name has recorded their contact details', async () => {
-        await expect(
-            actorCalled('Farah').attemptsTo(
-                Record.contactDetailsOf(
-                    'Farah',
-                    new HomeAddress('12 Baker Street, London'),
-                    new EmailAddress('farah@example.org'),
-                ),
-
-                Ensure.that(TheHomeAddressOf('Carol'), equals(new HomeAddress('unknown'))),
-            )
-        ).rejects.toThrow('Could not find HomeAddress qualified by Carol in the scenario context');
     });
 });
