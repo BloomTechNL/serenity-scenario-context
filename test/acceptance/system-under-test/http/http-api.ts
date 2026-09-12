@@ -15,9 +15,14 @@ import { HttpResponse } from './http-response';
  * Implementations behave like a small REST API: a `2xx` status with a
  * representation of a resource on success, a `4xx` status with an
  * {@link ErrorRepresentation} when the request doesn't make sense - the
- * resource doesn't exist, or already does.
+ * resource doesn't exist, or already does, or the caller isn't logged in.
+ *
+ * `headers` mirrors the one real HTTP header this fake API cares about:
+ * `Authorization`, carrying a `Bearer <token>` from a prior login - the
+ * same way a real HTTP client would attach it, rather than a request
+ * proving who it's from some other way.
  */
 export interface HttpApi {
-    get<ResponseBody>(path: string): HttpResponse<ResponseBody | ErrorRepresentation>;
-    post<ResponseBody>(path: string, body?: unknown): HttpResponse<ResponseBody | ErrorRepresentation>;
+    get<ResponseBody>(path: string, headers?: Record<string, string>): HttpResponse<ResponseBody | ErrorRepresentation>;
+    post<ResponseBody>(path: string, body?: unknown, headers?: Record<string, string>): HttpResponse<ResponseBody | ErrorRepresentation>;
 }

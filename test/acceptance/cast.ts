@@ -1,8 +1,6 @@
-import { randomUUID } from 'node:crypto';
-
 import { Actor, Cast } from '@serenity-js/core';
 
-import {ScenarioContext, ScenarioContextPiece, UseScenarioContext} from '../../src/index';
+import { ScenarioContext, ScenarioContextPiece, UseScenarioContext } from '../../src/index';
 import { SupportDeskApi } from './system-under-test/index';
 import { TestIdentificationContext } from './test-identification-context';
 import { UseSupportDeskApi } from './use-support-desk-api';

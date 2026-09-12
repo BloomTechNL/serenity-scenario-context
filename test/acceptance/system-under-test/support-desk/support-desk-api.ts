@@ -17,10 +17,29 @@ interface NewTicket {
     priority?: TicketPriority;
 }
 
+interface Credentials {
+    username: string;
+    password: string;
+}
+
+export interface AccountRepresentation {
+    username: string;
+}
+
+export interface SessionRepresentation {
+    token: string;
+    username: string;
+}
+
 /**
  * A fake "support desk" system, exposed the same way a real one would be:
- * over an HTTP-like API of resources - tickets, for now - rather than as
- * plain objects the tests can reach into and mutate directly.
+ * over an HTTP-like API of resources - tickets, and the agent accounts
+ * needed to get at them - rather than as plain objects the tests can reach
+ * into and mutate directly.
+ *
+ * Everything other than `/register` and `/login` requires a valid session,
+ * the same way a real support desk wouldn't let an anonymous caller raise,
+ * resolve or search for tickets.
  *
  * There's no real networking, framework or persistence here - `get`/`post`
  * are plain, synchronous, in-memory calls - but as far as anything calling
@@ -35,11 +54,13 @@ interface NewTicket {
  *
  * There's a single instance of this class, shared across every scenario -
  * `instance()` always returns the same one - the same way a real support
- * desk would keep its tickets in one backend, not spin up a fresh one per
- * test. Tickets raised in one scenario are still there in the next, which
- * is what makes referring to them by id, rather than by position, actually
- * matter - and why anything searching by subject needs to be specific
- * enough to tell its own tickets apart from everyone else's.
+ * desk would keep its tickets (and its registered agents) in one backend,
+ * not spin up a fresh one per test. Tickets raised in one scenario are
+ * still there in the next, which is what makes referring to them by id,
+ * rather than by position, actually matter - and why anything searching by
+ * subject needs to be specific enough to tell its own tickets apart from
+ * everyone else's, and every agent needs to register under its own,
+ * unique username.
  */
 export class SupportDeskApi implements HttpApi {
 
@@ -50,17 +71,32 @@ export class SupportDeskApi implements HttpApi {
     }
 
     private readonly tickets = new Map<string, TicketRepresentation>();
+    private readonly registeredAgents = new Map<string, string>();
+    private readonly sessions = new Map<string, string>();
 
-    get<ResponseBody>(path: string): HttpResponse<ResponseBody | ErrorRepresentation> {
-        return this.route(path) as HttpResponse<ResponseBody | ErrorRepresentation>;
+    get<ResponseBody>(path: string, headers: Record<string, string> = {}): HttpResponse<ResponseBody | ErrorRepresentation> {
+        return this.route(path, undefined, headers) as HttpResponse<ResponseBody | ErrorRepresentation>;
     }
 
-    post<ResponseBody>(path: string, body?: unknown): HttpResponse<ResponseBody | ErrorRepresentation> {
-        return this.route(path, body) as HttpResponse<ResponseBody | ErrorRepresentation>;
+    post<ResponseBody>(path: string, body?: unknown, headers: Record<string, string> = {}): HttpResponse<ResponseBody | ErrorRepresentation> {
+        return this.route(path, body, headers) as HttpResponse<ResponseBody | ErrorRepresentation>;
     }
 
-    private route(path: string, body?: unknown): HttpResponse<unknown> {
+    private route(path: string, body: unknown, headers: Record<string, string>): HttpResponse<unknown> {
         const { pathname, searchParams } = new URL(path, 'http://localhost');
+
+        if (pathname === '/register') {
+            return this.register(body as Partial<Credentials>);
+        }
+
+        if (pathname === '/login') {
+            return this.login(body as Partial<Credentials>);
+        }
+
+        const authenticationError = this.requireSession(headers);
+        if (authenticationError) {
+            return authenticationError;
+        }
 
         if (pathname === '/tickets/search') {
             return this.searchTicketsBySubject(searchParams.get('subject'), searchParams.get('testId'));
@@ -81,6 +117,66 @@ export class SupportDeskApi implements HttpApi {
         }
 
         return { status: 404, body: { error: `No such endpoint: ${ path }` } };
+    }
+
+    /**
+     * Registers a new agent account, the same way a real support desk would
+     * require an agent to be provisioned before they can log in. Usernames
+     * are taken on a first-come, first-served basis, same as any real sign-up.
+     */
+    private register(payload: Partial<Credentials> = {}): HttpResponse<AccountRepresentation | ErrorRepresentation> {
+        const { username, password } = payload;
+
+        if (! username || ! password) {
+            return { status: 400, body: { error: 'Registering needs both a username and a password' } };
+        }
+
+        if (this.registeredAgents.has(username)) {
+            return { status: 409, body: { error: `An agent called ${ username } is already registered` } };
+        }
+
+        this.registeredAgents.set(username, password);
+
+        return { status: 201, body: { username } };
+    }
+
+    /**
+     * Exchanges a username and password for a session - only agents that
+     * have already registered (via `/register`) are ever accepted, the same
+     * way a real support desk would only let provisioned agents in.
+     */
+    private login(payload: Partial<Credentials> = {}): HttpResponse<SessionRepresentation | ErrorRepresentation> {
+        const { username, password } = payload;
+
+        if (! username || ! password) {
+            return { status: 400, body: { error: 'A login needs both a username and a password' } };
+        }
+
+        if (this.registeredAgents.get(username) !== password) {
+            return { status: 401, body: { error: 'Invalid username or password' } };
+        }
+
+        const token = randomUUID();
+        this.sessions.set(token, username);
+
+        return { status: 200, body: { token, username } };
+    }
+
+    /**
+     * Every endpoint other than `/register` and `/login` needs a valid
+     * session - a `Bearer` token from a prior login - the same way a real
+     * support desk wouldn't let anyone touch a ticket before proving who
+     * they are.
+     */
+    private requireSession(headers: Record<string, string>): HttpResponse<ErrorRepresentation> | undefined {
+        const authorization = headers.Authorization ?? '';
+        const [ scheme, token ] = authorization.split(' ');
+
+        if (scheme !== 'Bearer' || ! token || ! this.sessions.has(token)) {
+            return { status: 401, body: { error: 'Login required' } };
+        }
+
+        return undefined;
     }
 
     private createTicket(payload: NewTicket = {} as NewTicket): HttpResponse<TicketRepresentation | ErrorRepresentation> {

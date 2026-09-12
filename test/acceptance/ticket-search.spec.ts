@@ -3,6 +3,7 @@ import { Ensure, equals } from '@serenity-js/assertions';
 
 import { raiseTicket } from './interactions/raise-ticket';
 import { numberOfTicketsFound } from './questions/number-of-tickets-found';
+import { setUpAccount } from './tasks/set-up-account';
 import { SupportDeskCast } from './cast';
 
 describe('A support agent searching for tickets by subject', () => {
@@ -15,6 +16,8 @@ describe('A support agent searching for tickets by subject', () => {
 
     it('finds no tickets when none have been raised', async () => {
         await morgan.attemptsTo(
+            setUpAccount(),
+
             Ensure.that(
                 numberOfTicketsFound({ searchTerm: 'ticket' }),
                 equals(0),
@@ -24,6 +27,8 @@ describe('A support agent searching for tickets by subject', () => {
 
     it('finds a raised ticket by searching for part of its subject', async () => {
         await morgan.attemptsTo(
+            setUpAccount(),
+
             raiseTicket({ subject: 'The printer is on fire' }),
         );
 
@@ -37,6 +42,8 @@ describe('A support agent searching for tickets by subject', () => {
 
     it('tells apart tickets that have different subjects', async () => {
         await morgan.attemptsTo(
+            setUpAccount(),
+
             raiseTicket({ subject: 'The printer is on fire' }),
             raiseTicket({ subject: 'Cannot reset my password' }),
         );
@@ -49,6 +56,8 @@ describe('A support agent searching for tickets by subject', () => {
 
     it('counts every ticket matching the same search term', async () => {
         await morgan.attemptsTo(
+            setUpAccount(),
+
             raiseTicket({ subject: 'The printer is on fire' }),
             raiseTicket({ subject: 'The printer is out of paper' }),
         );

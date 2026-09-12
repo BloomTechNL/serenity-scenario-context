@@ -14,6 +14,12 @@ import { ErrorRepresentation, HttpApi, HttpResponse } from './system-under-test/
  * do about anything other than the status it expected - here, by failing
  * loudly, the same way `ScenarioContextSearcher` does when its own
  * assumptions are violated.
+ *
+ * It also holds on to the session token from a successful login, and
+ * attaches it to every subsequent request as an `Authorization` header -
+ * the same way a real HTTP client remembers a cookie or bearer token, so
+ * that logging in is something an actor does once, not something every
+ * single interaction has to thread through by hand.
  */
 export class UseSupportDeskApi extends Ability {
 
@@ -21,8 +27,18 @@ export class UseSupportDeskApi extends Ability {
         return new UseSupportDeskApi(api);
     }
 
+    private token: string | undefined;
+
     constructor(private readonly api: HttpApi) {
         super();
+    }
+
+    /**
+     * Remembers `token` so it's presented on every request from now on -
+     * call this once, right after a successful login.
+     */
+    rememberSessionToken(token: string): void {
+        this.token = token;
     }
 
     /**
@@ -32,7 +48,7 @@ export class UseSupportDeskApi extends Ability {
      *  if the response status isn't 200.
      */
     get<ResponseBody>(path: string): ResponseBody {
-        return this.unwrap(this.api.get<ResponseBody>(path), 200, `GET ${ path }`);
+        return this.unwrap(this.api.get<ResponseBody>(path, this.headers()), 200, `GET ${ path }`);
     }
 
     /**
@@ -43,7 +59,13 @@ export class UseSupportDeskApi extends Ability {
      *  told otherwise).
      */
     post<ResponseBody>(path: string, body?: unknown, expectedStatus = 201): ResponseBody {
-        return this.unwrap(this.api.post<ResponseBody>(path, body), expectedStatus, `POST ${ path }`);
+        return this.unwrap(this.api.post<ResponseBody>(path, body, this.headers()), expectedStatus, `POST ${ path }`);
+    }
+
+    private headers(): Record<string, string> {
+        return this.token
+            ? { Authorization: `Bearer ${ this.token }` }
+            : {};
     }
 
     private unwrap<ResponseBody>(
