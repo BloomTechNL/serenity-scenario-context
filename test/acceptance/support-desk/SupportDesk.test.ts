@@ -1,4 +1,4 @@
-import { actorCalled, engage } from '@serenity-js/core';
+import { Actor, actorCalled } from '@serenity-js/core';
 import { Ensure, equals, property } from '@serenity-js/assertions';
 
 import { raiseTicket } from './interactions/Raise';
@@ -8,11 +8,13 @@ import { SupportDeskActors } from './Actors';
 
 describe('A support agent using the scenario context', () => {
 
-    beforeEach(() => engage(new SupportDeskActors()));
+    let chidi: Actor;
+
+    beforeEach(() => {
+        chidi = new SupportDeskActors().prepare(actorCalled('Chidi'));
+    });
 
     it('resolves a ticket by label, even when a later one is in the spotlight', async () => {
-        const chidi = actorCalled('Chidi');
-
         await chidi.attemptsTo(
             raiseTicket({ label: 'billing' }),
             raiseTicket({ label: 'login' }),
@@ -27,16 +29,14 @@ describe('A support agent using the scenario context', () => {
     });
 
     it('resolves a ticket by label, leaving an earlier one untouched', async () => {
-        const farida = actorCalled('Farida');
-
-        await farida.attemptsTo(
+        await chidi.attemptsTo(
             raiseTicket({ label: 'first-ticket' }),
             raiseTicket({}),
 
             resolveTicket(),
         );
 
-        await farida.attemptsTo(
+        await chidi.attemptsTo(
             Ensure.that(ticket(), property('status', equals('resolved'))),
             Ensure.that(ticket('first-ticket'), property('status', equals('open'))),
         );

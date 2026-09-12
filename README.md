@@ -114,14 +114,19 @@ await actorCalled('Alice')
 
   Note: this project uses plain Jest, which - unlike Serenity/JS's official
   Mocha, Jasmine and Cucumber adapters - doesn't reset actors between tests
-  automatically. Every test therefore needs its own, never-reused actor
-  name, so each actor is always freshly prepared rather than resurrected
-  with whatever ability (and however-populated a `ScenarioContext`) an
-  earlier test left them with. This matters more than it otherwise would
-  because `findOne()` fails outright on any unexpected leftover match,
-  rather than silently picking one. See the comment above
-  `describe('A support agent using the scenario context', ...)` for the full
-  explanation.
+  automatically, and Serenity/JS only ever prepares an actor - i.e. grants
+  them the abilities a `Cast` describes - the first time their name is used;
+  calling `engage(...)` again in a `beforeEach` doesn't re-prepare an actor
+  that already exists, so it wouldn't reset anything for a test reusing an
+  actor's name. Both tests here call `actorCalled('Chidi')`, so instead of
+  `engage`, `beforeEach` calls `SupportDeskActors#prepare` directly on that
+  actor: `Actor#whoCan` replaces an existing ability of a given type rather
+  than stacking it, so handing Chidi a *new* `SupportDeskActors` grants a
+  fresh `ScenarioContext` and a fresh fake system before every test, however
+  many times Chidi's been on stage before. This matters more than it
+  otherwise would because `findOne()` fails outright on any unexpected
+  leftover match, rather than silently picking one. See the comment above
+  `beforeEach` in `SupportDesk.test.ts` for the full explanation.
 
 ```bash
 npm test              # everything
