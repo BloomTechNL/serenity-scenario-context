@@ -33,22 +33,18 @@ export class TicketContext {
         public readonly subject: string,
     ) {
     }
-
-    static fromRepresentation(representation: TicketRepresentation): TicketContext {
-        return new TicketContext(representation.id, representation.subject);
-    }
 }
 
 export const raiseTicket = (details: TicketDetails = {}) => {
     const subject = details.subject ?? randomSubject();
 
     return Interaction.where(`#actor raises a ticket`, actor => {
-        const representation = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {
+        const response = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {
             subject,
             priority: details.priority,
         });
 
-        const ticketContext = TicketContext.fromRepresentation(representation);
+        const ticketContext = new TicketContext(response.id, subject);
         const qualifiers = details.label ? [details.label] : [];
 
         UseScenarioContext.as(actor).add(ticketContext, ...qualifiers);
