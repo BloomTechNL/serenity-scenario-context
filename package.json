@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "jest",
     "test:unit": "jest test/unit",
-    "test:acceptance": "jest test/acceptance"
+    "test:acceptance": "jest test/acceptance",
+    "prepare": "husky"
   },
   "keywords": [
     "serenity-js",
@@ -26,6 +27,7 @@
     "@serenity-js/core": "^3.46.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.5.0",
+    "husky": "^9.1.7",
     "jest": "^30.5.1",
     "ts-jest": "^29.4.12",
     "typescript": "^5.9.3"

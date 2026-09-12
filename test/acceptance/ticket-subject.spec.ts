@@ -1,4 +1,4 @@
-import {Actor} from '@serenity-js/core';
+import {Actor, actorCalled} from '@serenity-js/core';
 import { Ensure, equals, property } from '@serenity-js/assertions';
 
 import { raiseTicket } from './interactions/raise-ticket';
@@ -10,7 +10,7 @@ describe('A support agent using the scenario context', () => {
 
     beforeEach(() => {
         const cast = new SupportDeskCast();
-        priya = cast.prepare(priya);
+        priya = cast.prepare(actorCalled('Priya'));
     });
 
     it('remembers the subject of a raised ticket, matching what the system under test has on record', async () => {
