@@ -1,9 +1,9 @@
 import { Actor, actorCalled } from '@serenity-js/core';
 import { Ensure, equals, property } from '@serenity-js/assertions';
 
-import { raiseTicket } from './interactions/Raise';
-import { resolveTicket } from './interactions/Resolve';
-import { ticket } from './questions/questions';
+import { raiseTicket } from './interactions/RaiseTicket';
+import { resolveTicket } from './interactions/ResolveTicket';
+import { ticket } from './questions/Ticket';
 import { SupportDeskActors } from './Actors';
 
 describe('A support agent using the scenario context', () => {

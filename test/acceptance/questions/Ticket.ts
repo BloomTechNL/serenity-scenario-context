@@ -3,7 +3,7 @@ import { Question } from '@serenity-js/core';
 import { UseScenarioContext } from '../../../src/index';
 import { TicketRepresentation } from '../system-under-test/index';
 import { UseSupportDeskApi } from '../UseSupportDeskApi';
-import { Ticket, TicketPriority, TicketStatus } from '../interactions/Raise';
+import { TicketContext, TicketPriority, TicketStatus } from '../interactions/RaiseTicket';
 
 export interface TicketSnapshot {
     subject: string;
@@ -35,7 +35,7 @@ export function ticket(label?: string) {
     const description = label ? `ticket labelled ${ label }` : 'the ticket in the spotlight';
 
     return Question.about(description, actor => {
-        const searcher = UseScenarioContext.as(actor).withType(Ticket);
+        const searcher = UseScenarioContext.as(actor).withType(TicketContext);
 
         const found = label
             ? searcher.withQualifiers(label).findLastUsed()

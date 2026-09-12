@@ -49,48 +49,46 @@ export interface TicketDetails {
 }
 
 /**
- * A fake domain object used to demonstrate the scenario context ability.
+ * A fake domain object used to demonstrate the scenario context ability -
+ * the piece of context a support agent's scenario keeps about a ticket.
  * Imagine a support agent working through a queue of customer tickets,
  * switching their attention between several of them within a single
  * scenario.
  *
- * `id` is whatever opaque id the system under test assigned; `label` is the
- * human-readable name this scenario knows the ticket by, and is what
- * qualifies it in the scenario context - see `raiseTicket` below.
+ * Deliberately holds nothing but `id` and `subject` - the facts about a
+ * ticket that never change over its lifetime. `label` and `priority` (at
+ * raising time) and `status` (at resolving time) are all *how this scenario
+ * currently refers to* a ticket, not facts about it, so they're recorded as
+ * qualifiers on the {@link ScenarioContextPiece}, not as fields here - see
+ * `raiseTicket` and `resolveTicket`.
+ *
+ * Immutable, like every {@link ScenarioContextPiece} value should be:
+ * nothing about a `TicketContext`, once created, can change.
  *
  * Defined here, next to `raiseTicket` - the interaction that puts the first
- * `Ticket` piece of any given label on the scenario context - rather than
- * off in a separate "domain" module. `resolveTicket`, which also adds
- * `Ticket` pieces, and the question functions, which search for them,
- * import it from here. It's never imported by a spec: specs raise tickets
- * with plain `TicketDetails`, and verify them against plain object literals
- * - a `Ticket` only ever exists on the scenario context, not in a test.
+ * `TicketContext` piece of any given label on the scenario context - rather
+ * than off in a separate "domain" module. `resolveTicket`, which also adds
+ * `TicketContext` pieces, and the question functions, which search for
+ * them, import it from here. It's never imported by a spec: specs raise
+ * tickets with plain `TicketDetails`, and verify them against plain object
+ * literals - a `TicketContext` only ever exists on the scenario context,
+ * not in a test.
  */
-export class Ticket {
-
-    public status: TicketStatus = 'open';
+export class TicketContext {
 
     constructor(
         public readonly id: string,
-        public readonly label: string,
         public readonly subject: string,
-        public readonly priority: TicketPriority = 'normal',
     ) {
     }
 
     /**
      * Turns whatever the fake `system-under-test` hands back over its
      * HTTP-like API into an instance of this class, the same way a real API
-     * client would deserialise a JSON response into a domain object. The
-     * system's representation has no notion of a `label` - that's supplied
-     * by whoever's asking, since it's a fact about this scenario, not about
-     * the system.
+     * client would deserialise a JSON response into a domain object.
      */
-    static fromRepresentation(representation: TicketRepresentation, label: string): Ticket {
-        const ticket = new Ticket(representation.id, label, representation.subject, representation.priority);
-        ticket.status = representation.status;
-
-        return ticket;
+    static fromRepresentation(representation: TicketRepresentation): TicketContext {
+        return new TicketContext(representation.id, representation.subject);
     }
 }
 
@@ -116,10 +114,10 @@ export const raiseTicket = (details: TicketDetails = {}) => {
             priority: details.priority,
         });
 
-        const raised = Ticket.fromRepresentation(representation, label);
-        const qualifiers = raised.priority === 'urgent'
-            ? [ raised.label, 'urgent' ]
-            : [ raised.label ];
+        const raised = TicketContext.fromRepresentation(representation);
+        const qualifiers = representation.priority === 'urgent'
+            ? [ label, 'urgent' ]
+            : [ label ];
 
         UseScenarioContext.as(actor).add(raised, ...qualifiers);
     });
