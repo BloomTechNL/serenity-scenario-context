@@ -1,20 +1,73 @@
 # serenity-scenario-context
 
-A [Serenity/JS](https://serenity-js.org) ability that gives actors an advanced
-form of notes: a **scenario context** of typed, qualified pieces of
-information, where the most recently used piece is always "in the spotlight".
+A [Serenity/JS](https://serenity-js.org) `Ability` that gives actors an
+advanced form of notes: a **scenario context** of typed, qualified pieces of
+information, where the piece most recently added or looked up is always
+"in the spotlight".
+
+## How is this different from Serenity/JS's `Notes`?
+
+Serenity/JS already ships an `Ability` for remembering things: `TakeNotes`,
+backed by a `Notepad`. It's a flat key/value store - `notes().set('key',
+value)`, `notes().get('key')` - and it's a great fit when there's one value
+per name and you know that name upfront.
+
+`ScenarioContext` is for a different shape of problem: when an actor may be
+holding onto **several objects of the same type at once**, and what you want
+back isn't "whatever is stored under this exact key" but "the `Ticket` I
+just raised", or "the `Ticket` labelled `billing`", without having invented
+and threaded a unique string key through the whole scenario for every one of
+them.
+
+Concretely:
+
+|                                   | `Notes`                                   | `ScenarioContext`                                             |
+|-----------------------------------|--------------------------------------------|----------------------------------------------------------------|
+| Organised by                      | a key you choose                           | the value's own type, an ordered stack                          |
+| Telling two values apart          | give them different keys                   | free-form `qualifiers`, any number of them, in any combination  |
+| "The one I was just using"        | not tracked - you'd track it yourself       | built in: adding or finding a piece puts it "in the spotlight"  |
+| Retrieving without an exact key   | not possible                                | `withType(Type).findLastUsed()`                                 |
+| Retrieving something specific     | `notes().get('the-exact-key')`             | `withType(Type).withQualifiers(...).findOne()`                   |
+| Ambiguity (two things could match)| whichever one you happen to `get`           | `findOne()` throws - it never silently guesses                  |
+
+For example, an actor that raises a `billing` ticket and then a `login`
+ticket, and later wants to resolve "the ticket labelled `billing`", or
+"whichever ticket I was just looking at" - with `Notes` you'd need to invent
+and remember distinct keys (`'ticket-billing'`, `'ticket-login'`) and there's
+no way to ask for "the most recent one" without also tracking that
+separately. With `ScenarioContext`:
+
+```ts
+UseScenarioContext.as(actor).add(billingTicket, 'billing');
+UseScenarioContext.as(actor).add(loginTicket, 'login');
+
+// whichever Ticket was added or found most recently - the login ticket,
+// since it was the last one added and nothing has searched yet:
+UseScenarioContext.as(actor).withType(Ticket).findLastUsed();
+
+// the one labelled 'billing', found unambiguously by type + qualifier -
+// note that finding it also puts it back in the spotlight:
+UseScenarioContext.as(actor).withType(Ticket).withQualifiers('billing').findOne();
+```
+
+If your scenario only ever needs one value per name, reach for `Notes` -
+it's simpler. Reach for `ScenarioContext` once you have several instances of
+the same domain type in play and want to recall them the way you'd talk
+about them - by type, and by how you'd describe or most recently used one -
+rather than by a key invented purely for storage.
 
 ## The building blocks
 
-- [`ScenarioContextPiece`](src/ScenarioContextPiece.ts) - pairs an arbitrary
-  domain object with a set of free-form string qualifiers.
-- [`ScenarioContext`](src/ScenarioContext.ts) - an ordered stack of pieces.
-  It can iterate top to bottom, put a new piece on top, and move an existing
-  piece back to the top.
-- [`UseScenarioContext`](src/UseScenarioContext.ts) - the Serenity/JS
+- [`ScenarioContextPiece`](src/scenario-context-piece.ts) - pairs an
+  arbitrary domain object with a set of free-form string qualifiers.
+- [`ScenarioContext`](src/scenario-context.ts) - an ordered stack of pieces.
+  It can iterate top to bottom, put a new piece on top (either an
+  already-built `ScenarioContextPiece`, or a plain value plus its
+  qualifiers), and move an existing piece back to the top.
+- [`UseScenarioContext`](src/use-scenario-context.ts) - the Serenity/JS
   `Ability`. Actors use it to `add` domain objects, qualified however you
   like, and `withType(Type)` to start searching for them again.
-- [`ScenarioContextSearcher`](src/ScenarioContextSearcher.ts) - returned by
+- [`ScenarioContextSearcher`](src/scenario-context-searcher.ts) - returned by
   `withType`. Narrow it down with `withQualifiers(...)`, then resolve it
   with one of:
   - `findOne()` - insists that exactly one piece matches, and throws
@@ -30,106 +83,54 @@ information, where the most recently used piece is always "in the spotlight".
 
 ```ts
 import { actorCalled, Interaction, Question } from '@serenity-js/core';
+import { Ensure, equals } from '@serenity-js/assertions';
 import { UseScenarioContext } from 'serenity-scenario-context';
 
 class Ticket {
-    constructor(public readonly id: string) {}
+    constructor(
+        public readonly id: string,
+        public readonly status: 'open' | 'resolved',
+    ) {}
 }
 
-const RaiseATicket = (ticket: Ticket) =>
-    Interaction.where(`#actor raises ticket ${ticket.id}`, actor =>
-        UseScenarioContext.as(actor).add(ticket, ticket.id));
+const raiseTicket = (ticket: Ticket, label?: string) =>
+    Interaction.where(`#actor raises ticket ${ ticket.id }`, actor => {
+        UseScenarioContext.as(actor).add(ticket, ...(label ? [ label ] : []));
+    });
 
-const TheTicketInTheSpotlight = () =>
+const theTicketLabelled = (label: string) =>
+    Question.about(`the ticket labelled ${ label }`, actor =>
+        UseScenarioContext.as(actor).withType(Ticket).withQualifiers(label).findOne());
+
+const theTicketInTheSpotlight = () =>
     Question.about('the ticket in the spotlight', actor =>
         UseScenarioContext.as(actor).withType(Ticket).findLastUsed());
-
-const TheTicketIdentifiedBy = (id: string) =>
-    Question.about(`ticket ${id}`, actor =>
-        UseScenarioContext.as(actor).withType(Ticket).withQualifiers(id).findOne());
 
 await actorCalled('Alice')
     .whoCan(UseScenarioContext.using())
     .attemptsTo(
-        RaiseATicket(new Ticket('TICKET-1')),
+        raiseTicket(new Ticket('TICKET-1', 'open'), 'billing'),
+        raiseTicket(new Ticket('TICKET-2', 'open'), 'login'),
+
+        // 'login' was raised last, so it's the one in the spotlight - until
+        // something else is added or found, moving it back to the top:
+        Ensure.that(theTicketInTheSpotlight(), equals(new Ticket('TICKET-2', 'open'))),
+        Ensure.that(theTicketLabelled('billing'), equals(new Ticket('TICKET-1', 'open'))),
     );
 ```
 
-## Tests
+A few things worth calling out:
 
-- `test/unit` - unit tests for `ScenarioContext`, `ScenarioContextPiece`,
-  `ScenarioContextSearcher` and `UseScenarioContext`, exercised in isolation
-  from Serenity/JS actors.
-- `test/acceptance/support-desk` - a runnable, end-to-end example: a fake
-  "support desk" domain driven through a real Serenity/JS actor. Read it as
-  a worked example of the ability; run it as a regression test. Currently
-  two small scenarios - an agent raises a couple of tickets and resolves
-  one by label, either the one in the spotlight or the earlier one, leaving
-  the other untouched either way - kept deliberately small; more can be
-  added the same way.
-
-  `raiseTicket` and `resolveTicket` - the "interactions" - are real
-  Serenity/JS `Interaction`s, built with `Interaction.where(...)` and
-  performed via `attemptsTo`; `ticket` - the "question" - is a real
-  `Question`, built with `Question.about(...)`, same as anywhere else in
-  Serenity/JS. None of them take the actor as an argument: like any
-  `Interaction` or `Question`, they're handed the actor performing or
-  asking them - by `attemptsTo`/`Ensure.that` - only once they're actually
-  run, not by the spec that builds them. None of them reach into a
-  fake domain's objects directly - they talk to
-  [`system-under-test`](test/acceptance/system-under-test), a small fake backend exposed
-  over an HTTP-like `HttpApi`, via the `UseSupportDeskApi` ability, then
-  remember what it told them in the actor's `ScenarioContext`. This keeps
-  "the test" - exercising `UseScenarioContext` - clearly apart from "the
-  (fake) system it's driving", the way a real end-to-end test would be
-  structured. `Ticket` - the domain type - lives next to `raiseTicket`, the
-  interaction that first puts a piece of that type on the scenario context,
-  rather than in a shared "domain" module - and it's never imported by
-  `SupportDesk.test.ts`. The spec only deals in plain data: the details
-  `raiseTicket` needs (just a `label`, here - every field of `TicketDetails`
-  is optional, and whatever's missing is generated, randomised or defaulted,
-  so a spec only has to spell out what actually matters to it), and
-  `Ensure`/`property`/`equals` expectations checked against what `ticket`
-  returns - here, only its `status`, since this scenario doesn't care what a
-  ticket's `subject` or `priority` are, only that resolving one changes its
-  status without touching the other one's. A piece of context is an
-  implementation detail of the interaction/question functions that put it on
-  and read it off the `ScenarioContext` - not something a spec constructs or
-  imports itself.
-
-  Ticket ids are generated by [`system-under-test`](test/acceptance/system-under-test)
-  itself (as UUIDs), not supplied by the caller - the same way a real
-  backend would hand out its own opaque ids. `raiseTicket` instead takes a
-  `label`: a human-readable name this scenario gives the ticket, used to
-  qualify it in the `ScenarioContext` (see `ScenarioContextPiece` above).
-  `resolveTicket` and `ticket` both accept that same `label` (optionally -
-  omit it and either acts on whichever ticket is currently "in the
-  spotlight" instead). `ticket` recalls the actor's own notes to translate
-  the `label` into the real id, then asks the system for that ticket's
-  canonical state - the way a real client would keep its own mapping from a
-  friendly name to whatever id a backend actually uses - and hands back
-  just its `subject`, `priority` and `status`, leaving the id out of it
-  entirely, since a spec has no way to predict it and no reason to care
-  what it is.
-
-  Note: this project uses plain Jest, which - unlike Serenity/JS's official
-  Mocha, Jasmine and Cucumber adapters - doesn't reset actors between tests
-  automatically, and Serenity/JS only ever prepares an actor - i.e. grants
-  them the abilities a `Cast` describes - the first time their name is used;
-  calling `engage(...)` again in a `beforeEach` doesn't re-prepare an actor
-  that already exists, so it wouldn't reset anything for a test reusing an
-  actor's name. Both tests here call `actorCalled('Chidi')`, so instead of
-  `engage`, `beforeEach` calls `SupportDeskActors#prepare` directly on that
-  actor: `Actor#whoCan` replaces an existing ability of a given type rather
-  than stacking it, so handing Chidi a *new* `SupportDeskActors` grants a
-  fresh `ScenarioContext` and a fresh fake system before every test, however
-  many times Chidi's been on stage before. This matters more than it
-  otherwise would because `findOne()` fails outright on any unexpected
-  leftover match, rather than silently picking one. See the comment above
-  `beforeEach` in `SupportDesk.test.ts` for the full explanation.
-
-```bash
-npm test              # everything
-npm run test:unit
-npm run test:acceptance
-```
+- `add`/`withType`/`withQualifiers` never take the actor as an argument -
+  like any Serenity/JS `Interaction` or `Question`, `raiseTicket(...)` and
+  `theTicketLabelled(...)` are only handed the actor performing or asking
+  them once they actually run, via `attemptsTo`/`Ensure.that` - not by the
+  code that builds them.
+- Qualifiers are optional and free-form: `add(ticket)` on its own is fine
+  when there's only ever going to be one `Ticket` around, or when
+  `findLastUsed()` is all you'll ever need.
+- `UseScenarioContext.using()` with no argument gives the actor a fresh,
+  empty `ScenarioContext` of their own; pass an existing `ScenarioContext`
+  instance instead when you want several actors to share one (see
+  [`test/acceptance/cast.ts`](test/acceptance/cast.ts) for a worked
+  example).
