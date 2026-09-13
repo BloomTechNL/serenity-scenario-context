@@ -12,11 +12,12 @@
  * swapped out, though, via {@link ScenarioContextPiece#replace} - which
  * updates what a piece holds without disturbing its identity, its
  * qualifiers, or its position in the {@link ScenarioContextPart} that holds
- * it. This is what {@link ScenarioContextPart#find} returns, and is meant
- * to be updated in place once you've found it:
+ * it. This is what {@link ScenarioContextPart#findPiece} returns - reach
+ * for that, rather than {@link ScenarioContextPart#find}, whenever you'll
+ * want to update the value in place once you've found it:
  *
  * ```ts
- * const ticket = UseScenarioContext.as(actor).find(Ticket);
+ * const ticket = UseScenarioContext.as(actor).findPiece(Ticket);
  *
  * ticket.replace(ticket.value.resolve());
  *

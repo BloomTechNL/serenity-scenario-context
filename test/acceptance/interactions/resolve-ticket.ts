@@ -11,10 +11,10 @@ export const resolveTicket = (label?: string) =>
         label ? `#actor resolves the ticket labelled ${ label }` : '#actor resolves the ticket in the spotlight',
         actor => {
             const qualifiers = label ? [ label ] : [];
-            const ticket = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers).value;
+            const ticketContext = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers);
 
             UseSupportDeskApi.as(actor).post<TicketRepresentation>(
-                `/tickets/${ ticket.id }/resolve`, undefined, 200,
+                `/tickets/${ ticketContext.id }/resolve`, undefined, 200,
             );
         },
     );

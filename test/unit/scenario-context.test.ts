@@ -20,7 +20,7 @@ describe('ScenarioContext', () => {
             const context = new ScenarioContext();
             const piece = context.add(new Widget('spanner'), 'metal');
 
-            expect(context.partFor(Widget).find('metal')).toBe(piece);
+            expect(context.partFor(Widget).findPiece('metal')).toBe(piece);
         });
 
         it('returns the piece that was put, for convenience', () => {
@@ -34,8 +34,8 @@ describe('ScenarioContext', () => {
             const widget = context.add(new Widget('spanner'), 'metal');
             const gadget = context.add(new Gadget('gizmo'));
 
-            expect(context.partFor(Widget).find('metal')).toBe(widget);
-            expect(context.partFor(Gadget).find()).toBe(gadget);
+            expect(context.partFor(Widget).findPiece('metal')).toBe(widget);
+            expect(context.partFor(Gadget).findPiece()).toBe(gadget);
         });
 
         it('propagates the fixed-qualifier-count and uniqueness constraints enforced by the part - see ScenarioContextPart', () => {
@@ -69,7 +69,7 @@ describe('ScenarioContext', () => {
             const context = new ScenarioContext();
             const piece = context.add(new Widget('spanner'), 'metal');
 
-            expect(context.partFor(Widget).find('metal')).toBe(piece);
+            expect(context.partFor(Widget).findPiece('metal')).toBe(piece);
         });
 
         it('is a ScenarioContextPart', () => {

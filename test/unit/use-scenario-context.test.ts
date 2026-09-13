@@ -12,7 +12,7 @@ describe('UseScenarioContext', () => {
 
         ability.add(new Fruit('apple'));
 
-        expect(ability.find(Fruit).value).toBeInstanceOf(Fruit);
+        expect(ability.find(Fruit)).toBeInstanceOf(Fruit);
     });
 
     describe('add', () => {
@@ -23,7 +23,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple);
 
-            expect(ability.find(Fruit).value).toBe(apple);
+            expect(ability.find(Fruit)).toBe(apple);
         });
 
         it('makes the value findable by its type and qualifiers', () => {
@@ -32,7 +32,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple, 'crunchy', 'red');
 
-            expect(ability.find(Fruit, 'red').value).toBe(apple);
+            expect(ability.find(Fruit, 'red')).toBe(apple);
         });
 
         it('returns the context piece that was created, for convenience', () => {
@@ -53,7 +53,7 @@ describe('UseScenarioContext', () => {
             const ability = UseScenarioContext.using(context);
             const apple = context.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.find(Fruit, 'crunchy').value).toBe(apple);
+            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
         });
 
         // The exhaustive behaviour of searching - the exact-match vs
@@ -65,7 +65,7 @@ describe('UseScenarioContext', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = ability.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.find(Fruit, 'crunchy').value).toBe(apple);
+            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
         });
 
         it('falls back to the most recently used match when fewer qualifiers than the type takes are given', () => {
@@ -73,7 +73,29 @@ describe('UseScenarioContext', () => {
             ability.add(new Fruit('apple'), 'gala');
             const banana = ability.add(new Fruit('banana'), 'cavendish').value;
 
-            expect(ability.find(Fruit).value).toBe(banana);
+            expect(ability.find(Fruit)).toBe(banana);
+        });
+    });
+
+    describe('findPiece', () => {
+
+        it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {
+            const context = new ScenarioContext();
+            const ability = UseScenarioContext.using(context);
+            const apple = context.add(new Fruit('apple'), 'crunchy').value;
+
+            expect(ability.findPiece(Fruit, 'crunchy').value).toBe(apple);
+        });
+
+        it('returns the piece, letting the caller replace its value afterwards', () => {
+            const ability = UseScenarioContext.using(new ScenarioContext());
+            ability.add(new Fruit('apple'), 'crunchy');
+
+            const found = ability.findPiece(Fruit, 'crunchy');
+            const greenApple = new Fruit('green apple');
+            found.replace(greenApple);
+
+            expect(ability.find(Fruit, 'crunchy')).toBe(greenApple);
         });
     });
 });

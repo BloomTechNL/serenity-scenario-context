@@ -13,7 +13,7 @@ export const changeTicketSubject = (newSubject: string, label?: string) =>
             : `#actor changes the subject of the ticket in the spotlight to "${ newSubject }"`,
         actor => {
             const qualifiers = label ? [ label ] : [];
-            const piece = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers);
+            const piece = UseScenarioContext.as(actor).findPiece(TicketContext, ...qualifiers);
 
             const ticketContext = piece.value;
 

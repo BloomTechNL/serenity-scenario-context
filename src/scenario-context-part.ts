@@ -10,7 +10,8 @@ import { ScenarioContextPiece } from './scenario-context-piece';
 /**
  * Holds every {@link ScenarioContextPiece} of one particular type recorded
  * in a {@link ScenarioContext}, as an ordered stack: the piece put on top
- * most recently is what {@link #find} prefers when several pieces match.
+ * most recently is what {@link #findPiece} prefers when several pieces
+ * match.
  *
  * Also enforces the two invariants {@link ScenarioContext} establishes per
  * type: every piece carries the same, fixed number of qualifiers -
@@ -60,6 +61,20 @@ export class ScenarioContextPart<Value = unknown> {
     }
 
     /**
+     * Shorthand for {@link ScenarioContextPart#findPiece} that returns the
+     * value straight away - reach for this unless you need to
+     * {@link ScenarioContextPiece#replace} it afterwards.
+     *
+     * @throws TooManyQualifiersError
+     *  if more qualifiers are given than this type takes.
+     * @throws PieceNotFoundError
+     *  if no piece matches `qualifiers`.
+     */
+    find(...qualifiers: string[]): Value {
+        return this.findPiece(...qualifiers).value;
+    }
+
+    /**
      * Finds the piece qualified by every one of `qualifiers`, and puts it
      * on top of this part - "in the spotlight".
      *
@@ -70,6 +85,10 @@ export class ScenarioContextPart<Value = unknown> {
      * questions asked. Given more, `qualifiers` couldn't possibly match
      * anything.
      *
+     * Reach for this over {@link ScenarioContextPart#find} only when you
+     * intend to {@link ScenarioContextPiece#replace} the value once you've
+     * read it.
+     *
      * @returns the {@link ScenarioContextPiece} that was found.
      *
      * @throws TooManyQualifiersError
@@ -77,7 +96,7 @@ export class ScenarioContextPart<Value = unknown> {
      * @throws PieceNotFoundError
      *  if no piece matches `qualifiers`.
      */
-    find(...qualifiers: string[]): ScenarioContextPiece<Value> {
+    findPiece(...qualifiers: string[]): ScenarioContextPiece<Value> {
         if (this.qualifierCount !== undefined && qualifiers.length > this.qualifierCount) {
             throw new TooManyQualifiersError(this.type, this.qualifierCount, qualifiers.length);
         }

@@ -11,9 +11,9 @@ export function ticket(label?: string) {
 
     return Question.about(description, actor => {
         const qualifiers = label ? [ label ] : [];
-        const found = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers).value;
+        const ticketContext = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers);
 
-        const representation = UseSupportDeskApi.as(actor).get<TicketRepresentation>(`/tickets/${ found.id }`);
+        const representation = UseSupportDeskApi.as(actor).get<TicketRepresentation>(`/tickets/${ ticketContext.id }`);
 
         return {
             subject: representation.subject,
@@ -28,7 +28,7 @@ export function expectedTicket(label?: string) {
 
     return Question.about(description, actor => {
         const qualifiers = label ? [ label ] : [];
-        const found = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers).value;
+        const found = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers);
 
         return {
             subject: found.subject,

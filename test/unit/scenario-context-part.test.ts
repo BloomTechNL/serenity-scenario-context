@@ -34,7 +34,7 @@ describe('ScenarioContextPart', () => {
 
             // fewer qualifiers than the fixed count (1) falls back to
             // "whichever is most recently used" - proving `second` is on top.
-            expect(part.find().value).toBe(second);
+            expect(part.find()).toBe(second);
         });
     });
 
@@ -83,19 +83,19 @@ describe('ScenarioContextPart', () => {
             part.add(pieceOf(apple, 'red'));
             part.add(pieceOf(banana, 'yellow'));
 
-            expect(part.find('red').value).toBe(apple);
-            expect(part.find('yellow').value).toBe(banana);
+            expect(part.find('red')).toBe(apple);
+            expect(part.find('yellow')).toBe(banana);
         });
     });
 
-    describe('find', () => {
+    describe('findPiece', () => {
 
         it('returns the piece holding the single value of this part\'s type', () => {
             const part = new ScenarioContextPart(Fruit);
             const apple = new Fruit('apple');
             part.add(pieceOf(apple));
 
-            expect(part.find().value).toBe(apple);
+            expect(part.findPiece().value).toBe(apple);
         });
 
         it('behaves like an exact-match search when exactly the fixed number of qualifiers for the type is given', () => {
@@ -105,15 +105,15 @@ describe('ScenarioContextPart', () => {
             part.add(pieceOf(fuji, 'red', 'crunchy'));
             part.add(pieceOf(new Fruit('cavendish banana'), 'yellow', 'soft'));
 
-            expect(part.find('red', 'crunchy').value).toBe(fuji);
+            expect(part.findPiece('red', 'crunchy').value).toBe(fuji);
         });
 
         it('throws when the fixed number of qualifiers is given but nothing matches', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('fuji apple'), 'red', 'crunchy'));
 
-            expect(() => part.find('yellow', 'soft')).toThrow(PieceNotFoundError);
-            expect(() => part.find('yellow', 'soft')).toThrow(
+            expect(() => part.findPiece('yellow', 'soft')).toThrow(PieceNotFoundError);
+            expect(() => part.findPiece('yellow', 'soft')).toThrow(
                 'Could not find Fruit qualified by yellow, soft in the scenario context'
             );
         });
@@ -128,7 +128,7 @@ describe('ScenarioContextPart', () => {
             // plus anything else "apple" is qualified by.
             part.add(pieceOf(new Fruit('cherry'), 'red', 'shiny'));
 
-            expect(part.find('red', 'crunchy').value).toBe(apple);
+            expect(part.findPiece('red', 'crunchy').value).toBe(apple);
         });
 
         it('falls back to the most recently used match, without complaining about ambiguity, when fewer than the fixed number of qualifiers is given', () => {
@@ -137,7 +137,7 @@ describe('ScenarioContextPart', () => {
             const cavendish = new Fruit('cavendish banana');
             part.add(pieceOf(cavendish, 'yellow', 'soft'));
 
-            expect(part.find().value).toBe(cavendish);
+            expect(part.findPiece().value).toBe(cavendish);
         });
 
         it('still narrows down which most-recently-used match it settles for', () => {
@@ -146,15 +146,15 @@ describe('ScenarioContextPart', () => {
             part.add(pieceOf(redApple, 'red', 'crunchy'));
             part.add(pieceOf(new Fruit('cavendish banana'), 'yellow', 'soft'));  // on top, but not red
 
-            expect(part.find('red').value).toBe(redApple);
+            expect(part.findPiece('red').value).toBe(redApple);
         });
 
         it('throws when more qualifiers than the fixed number for the type are given', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('fuji apple'), 'red', 'crunchy'));
 
-            expect(() => part.find('red', 'crunchy', 'extra')).toThrow(TooManyQualifiersError);
-            expect(() => part.find('red', 'crunchy', 'extra')).toThrow(
+            expect(() => part.findPiece('red', 'crunchy', 'extra')).toThrow(TooManyQualifiersError);
+            expect(() => part.findPiece('red', 'crunchy', 'extra')).toThrow(
                 'Fruit takes 2 qualifier(s), but 3 were given to find()'
             );
         });
@@ -162,11 +162,11 @@ describe('ScenarioContextPart', () => {
         it('throws when nothing has been added yet', () => {
             const part = new ScenarioContextPart(Fruit);
 
-            expect(() => part.find('red')).toThrow(PieceNotFoundError);
-            expect(() => part.find('red')).toThrow(
+            expect(() => part.findPiece('red')).toThrow(PieceNotFoundError);
+            expect(() => part.findPiece('red')).toThrow(
                 'Could not find Fruit qualified by red in the scenario context'
             );
-            expect(() => part.find()).toThrow('Could not find Fruit in the scenario context');
+            expect(() => part.findPiece()).toThrow('Could not find Fruit in the scenario context');
         });
 
         it('puts the found value in the spotlight, on top of the part', () => {
@@ -175,22 +175,19 @@ describe('ScenarioContextPart', () => {
             part.add(pieceOf(apple, 'crunchy'));
             part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
 
-            part.find('crunchy');
+            part.findPiece('crunchy');
 
             // fewer qualifiers than the fixed count (1) falls back to
             // "whichever is most recently used" - proving `apple` is now on top.
-            expect(part.find().value).toBe(apple);
+            expect(part.findPiece().value).toBe(apple);
         });
-    });
-
-    describe('the returned piece', () => {
 
         it('lets the found value be replaced, in place, via replace', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'crunchy'));
             part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
 
-            const found = part.find('crunchy');
+            const found = part.findPiece('crunchy');
             const greenApple = new Fruit('green apple');
 
             found.replace(greenApple);
@@ -202,21 +199,51 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'crunchy', 'red'));
 
-            const found = part.find();
+            const found = part.findPiece();
             found.replace(new Fruit('green apple'));
 
-            expect(part.find('crunchy', 'red').value).toBeInstanceOf(Fruit);
+            expect(part.findPiece('crunchy', 'red').value).toBeInstanceOf(Fruit);
         });
 
         it('lets a later search find the replacement value', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'crunchy'));
 
-            const found = part.find();
+            const found = part.findPiece();
             const greenApple = new Fruit('green apple');
             found.replace(greenApple);
 
-            expect(part.find('crunchy').value).toBe(greenApple);
+            expect(part.findPiece('crunchy').value).toBe(greenApple);
+        });
+    });
+
+    describe('find', () => {
+
+        it('returns the value of the piece findPiece would find, rather than the piece itself', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple, 'crunchy'));
+
+            expect(part.find('crunchy')).toBe(apple);
+        });
+
+        it('resolves qualifiers, and puts the match in the spotlight, exactly as findPiece does', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple, 'crunchy'));
+            part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
+
+            part.find('crunchy');
+
+            expect(part.find()).toBe(apple);
+        });
+
+        it('throws the same errors as findPiece', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), 'red'));
+
+            expect(() => part.find('red', 'extra')).toThrow(TooManyQualifiersError);
+            expect(() => part.find('green')).toThrow(PieceNotFoundError);
         });
     });
 
@@ -226,7 +253,7 @@ describe('ScenarioContextPart', () => {
         const carrot = new Vegetable('carrot');
         vegetable.add(pieceOf(carrot));
 
-        expect(vegetable.find().value).toBe(carrot);
+        expect(vegetable.find()).toBe(carrot);
         expect(() => fruit.find()).toThrow();
     });
 });
