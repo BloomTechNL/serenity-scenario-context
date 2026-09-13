@@ -1,14 +1,17 @@
 # Serenity Scenario Context
 
-A decentralized, type-safe way to share scenario state in [Serenity/JS](https://serenity-js.org/).
+A type-safe way to share and retrieve scenario state in [Serenity/JS](https://serenity-js.org/).
 
-`serenity-scenario-context` lets actors store and retrieve objects by their **type** and, when needed, by **qualifiers** — without maintaining a central `Notes` interface.
+`serenity-scenario-context` provides two things that make scenario state easier to work with:
 
-## Why?
+1. **Decentralized typing** — capabilities can add their own state without maintaining a central `Notes` type.
+2. **Spotlight behavior** — when multiple objects of the same type exist, the most recently used object can be retrieved naturally, while qualifiers allow you to explicitly select another one.
 
-Serenity/JS `Notepad` is excellent for explicit, stable scenario state:
+## Why Scenario Context?
 
-```ts
+Serenity/JS `Notepad` works well when scenario state is small and explicitly named:
+
+```ts id="5h1q3c"
 interface Notes {
     customer: Customer;
     order: Order;
@@ -18,9 +21,13 @@ notes<Notes>().set('customer', customer);
 notes<Notes>().set('order', order);
 ```
 
-As a test suite grows, the `Notes` type can become a central registry of unrelated scenario state:
+As a test suite grows, two challenges can emerge.
 
-```ts
+### 1. Decentralized typing
+
+A shared `Notes` type can become a central registry of unrelated scenario state:
+
+```ts id="4k8v5n"
 interface Notes {
     customer: Customer;
     order: Order;
@@ -30,37 +37,41 @@ interface Notes {
 }
 ```
 
-A capability that introduces a new kind of state now has to modify a shared type.
+A capability that introduces `Payment` now needs to modify a shared type.
 
-`ScenarioContext` takes a decentralized approach:
+With `ScenarioContext`, the capability can simply register what it produces:
 
-```ts
+```ts id="x6r2mv"
 context.add(payment);
 ```
 
-and later:
+and consumers retrieve it by type:
 
-```ts
+```ts id="q3m7ds"
 context.find(Payment);
 ```
 
-The capability that produces the state owns its type. No central schema is required.
+There is no central schema containing every possible type of scenario state.
 
-## Why not just use Notepad?
+### 2. Spotlight behavior
 
-You absolutely can.
+Consider a scenario that creates several tickets:
 
-Use `Notepad` when your scenario state is small and explicit:
+```ts id="n8w4kc"
+CreateTicket.called('Billing problem');
+ResolveTicket();
 
-```ts
-notes<Notes>().get('order');
+CreateTicket.called('Technical problem');
+ResolveTicket();
 ```
 
-`ScenarioContext` becomes useful when your scenarios contain many objects, multiple instances of the same type, or independently developed capabilities.
+With `ScenarioContext`, the most recently used `Ticket` is automatically in the **spotlight**.
 
-For example:
+So `ResolveTicket()` can operate on the current ticket without requiring every capability to pass around or invent a new key.
 
-```ts
+When multiple objects need to be distinguished, qualifiers make the lookup explicit:
+
+```ts id="v2p6yx"
 context.add(billingTicket, {
     label: 'billing',
 });
@@ -70,39 +81,41 @@ context.add(technicalTicket, {
 });
 ```
 
-Retrieve them by type and qualifier:
-
-```ts
+```ts id="r7k4mc"
 context.find(Ticket, {
     label: 'billing',
 });
 ```
 
-The difference is architectural:
+This gives you both:
 
-```text
+* **implicit, convenient access** to the current object;
+* **explicit, qualified lookup** when several objects matter.
+
+### Notepad vs. Scenario Context
+
+The two approaches model scenario state differently:
+
+```text id="f3w9qa"
 Notepad
     key → value
-    central type
+    centrally typed
 
 ScenarioContext
     type + qualifiers → value
-    decentralized state
+    decentralized
+    + spotlight for the latest object
 ```
 
-`Notepad` asks:
+`Notepad` is a great choice for small, stable, explicitly named scenario state.
 
-> "What key did I use for this?"
-
-`ScenarioContext` asks:
-
-> "What kind of object do I need, and which one?"
+`ScenarioContext` is designed for scenarios where state is more dynamic, multiple objects of the same type are common, or capabilities should contribute state independently.
 
 ## Basic usage
 
 Give an actor access to a context:
 
-```ts
+```ts id="j5s8nd"
 const context = new ScenarioContext();
 
 actorCalled('Alice')
@@ -113,7 +126,7 @@ actorCalled('Alice')
 
 Store an object:
 
-```ts
+```ts id="p2v6rk"
 UseScenarioContext
     .as(actor)
     .add(customer);
@@ -121,38 +134,18 @@ UseScenarioContext
 
 Retrieve it:
 
-```ts
+```ts id="z9c4bw"
 const customer =
     UseScenarioContext
         .as(actor)
         .find(Customer);
 ```
 
-## The spotlight
-
-When a scenario works with one object of a type at a time, the latest object can be retrieved without a qualifier:
-
-```ts
-CreateTicket.called('Billing problem');
-
-ResolveTicket();
-```
-
-When multiple objects exist, use qualifiers to make the lookup explicit:
-
-```ts
-context.find(Ticket, {
-    label: 'billing',
-});
-```
-
-This gives you concise code when the context is unambiguous and explicit lookup when it isn't.
-
 ## Sharing between actors
 
 A context can be shared by multiple actors:
 
-```ts
+```ts id="m7q2fx"
 const context = new ScenarioContext();
 
 alice.whoCan(UseScenarioContext.using(context));
@@ -165,22 +158,29 @@ State added by one actor can therefore be retrieved by another.
 
 Use `ScenarioContext` when:
 
-* scenario state is dynamic;
-* multiple instances of a type exist;
-* qualifiers are useful for identifying objects;
-* capabilities should contribute state independently;
-* you want to avoid a central `Notes` type.
+* capabilities should contribute scenario state independently;
+* you want to avoid a central `Notes` type;
+* scenarios contain multiple instances of the same type;
+* the latest object naturally represents the current focus;
+* qualifiers are useful for selecting a specific object.
 
 For small, stable scenario state, native Serenity/JS `Notepad` may be the simpler choice.
 
 ## In short
 
-`Notepad` is a great **named scenario state store**.
+`Notepad` is a **named scenario state store**.
 
-`ScenarioContext` is a **decentralized object context**:
+`ScenarioContext` is a **decentralized, type-aware context with spotlight behavior**:
 
-```text
-type + qualifiers → object
+```text id="h4t6zs"
+             Scenario Context
+                    │
+          ┌─────────┴─────────┐
+          │                   │
+   decentralized          spotlight
+      typing               behavior
+          │                   │
+   type + qualifiers    latest object
 ```
 
-It is designed to keep scenario state close to the capabilities that produce and consume it — without requiring a central schema for everything that can exist in a scenario.
+It keeps scenario state close to the capabilities that produce and consume it, while making the most recently used object naturally available when explicit identification is unnecessary.
