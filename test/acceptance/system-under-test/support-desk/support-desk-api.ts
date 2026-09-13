@@ -116,6 +116,11 @@ export class SupportDeskApi implements HttpApi {
             return this.resolveTicket(decodeURIComponent(resolveTicket[1]));
         }
 
+        const changeTicketSubject = /^\/tickets\/([^/]+)\/subject$/.exec(pathname);
+        if (changeTicketSubject) {
+            return this.changeTicketSubject(decodeURIComponent(changeTicketSubject[1]), body as Partial<NewTicket>);
+        }
+
         return { status: 404, body: { error: `No such endpoint: ${ path }` } };
     }
 
@@ -233,6 +238,29 @@ export class SupportDeskApi implements HttpApi {
         this.tickets.set(id, resolved);
 
         return { status: 200, body: resolved };
+    }
+
+    /**
+     * Changes the subject of an existing ticket, in place - its id, priority
+     * and status are all left untouched.
+     */
+    private changeTicketSubject(id: string, payload: Partial<NewTicket> = {}): HttpResponse<TicketRepresentation | ErrorRepresentation> {
+        const { subject } = payload;
+
+        if (! subject) {
+            return { status: 400, body: { error: 'A ticket needs at least a subject' } };
+        }
+
+        const ticket = this.tickets.get(id);
+
+        if (! ticket) {
+            return { status: 404, body: { error: `No ticket with id ${ id }` } };
+        }
+
+        const updated: TicketRepresentation = { ...ticket, subject };
+        this.tickets.set(id, updated);
+
+        return { status: 200, body: updated };
     }
 
     private found<Representation>(

@@ -4,4 +4,9 @@ export class TicketContext {
         public readonly subject: string,
     ) {
     }
+
+    changeSubject(newSubject: string): TicketContext {
+        return new TicketContext(this.id, newSubject);
+    }
+
 }
