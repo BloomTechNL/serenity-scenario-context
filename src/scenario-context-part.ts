@@ -83,16 +83,15 @@ export class ScenarioContextPart<Value = unknown> {
             throw new TooManyQualifiersError(this.type, this.qualifierCount(), qualifiers.length);
         }
 
-        const matches = this.pieces.filter(piece => piece.hasQualifiers(qualifiers));
+        for (const piece of this.pieces) {
+            if (piece.hasQualifiers(qualifiers)) {
+                this.pieces.splice(this.pieces.indexOf(piece), 1);
+                this.pieces.unshift(piece);
 
-        if (matches.length === 0) {
-            throw new PieceNotFoundError(this.type, qualifiers);
+                return piece;
+            }
         }
 
-        const piece = matches[0];
-        this.pieces.splice(this.pieces.indexOf(piece), 1);
-        this.pieces.unshift(piece);
-
-        return piece;
+        throw new PieceNotFoundError(this.type, qualifiers);
     }
 }
