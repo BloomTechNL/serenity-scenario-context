@@ -58,6 +58,10 @@ export class ScenarioContextPiece<Value = unknown> {
         return this.qualifiers;
     }
 
+    qualifierCount(): number {
+        return this.qualifiers.size;
+    }
+
     /**
      * @returns `true` if `other` is qualified by the exact same combination
      *  of qualifiers as this piece - neither more, nor fewer.

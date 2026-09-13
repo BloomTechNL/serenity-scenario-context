@@ -15,18 +15,14 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  */
 export class ScenarioContextPart<Value = unknown> {
 
-    private qualifierCount: number | undefined;
     private readonly pieces: Array<ScenarioContextPiece<Value>> = [];
 
     constructor(private readonly type: Constructor<Value>) {
     }
 
-    /**
-     * @returns the fixed number of qualifiers established for this part's
-     *  type, or `undefined` if this part doesn't hold any piece yet.
-     */
-    numberOfQualifiers(): number | undefined {
-        return this.qualifierCount;
+    qualifierCount(): number {
+        if (this.pieces.length === 0) { throw new Error('Qualifiercount is undetermined; No pieces added yet'); }
+        return this.pieces[0].qualifierCount();
     }
 
     /**
@@ -40,12 +36,10 @@ export class ScenarioContextPart<Value = unknown> {
      *  combination of qualifiers.
      */
     add(piece: ScenarioContextPiece<Value>): void {
-        const qualifierCount = piece.allQualifiers().size;
+        const qualifierCount = piece.qualifierCount();
 
-        if (this.qualifierCount === undefined) {
-            this.qualifierCount = qualifierCount;
-        } else if (qualifierCount !== this.qualifierCount) {
-            throw new UnexpectedQualifierCountError(this.type, qualifierCount, this.qualifierCount);
+        if (this.pieces.length > 0 && qualifierCount !== this.qualifierCount()) {
+            throw new UnexpectedQualifierCountError(this.type, qualifierCount, this.qualifierCount());
         }
 
         if (this.pieces.some(existing => existing.hasSameQualifiersAs(piece))) {
@@ -85,8 +79,8 @@ export class ScenarioContextPart<Value = unknown> {
      *  if no piece matches `qualifiers`.
      */
     findPiece(...qualifiers: string[]): ScenarioContextPiece<Value> {
-        if (this.qualifierCount !== undefined && qualifiers.length > this.qualifierCount) {
-            throw new TooManyQualifiersError(this.type, this.qualifierCount, qualifiers.length);
+        if (this.pieces.length > 0 && qualifiers.length > this.qualifierCount()) {
+            throw new TooManyQualifiersError(this.type, this.qualifierCount(), qualifiers.length);
         }
 
         const matches = this.pieces.filter(piece => piece.hasQualifiers(qualifiers));

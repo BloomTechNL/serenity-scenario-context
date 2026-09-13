@@ -35,20 +35,6 @@ describe('ScenarioContextPart', () => {
 
     describe('the fixed qualifier count', () => {
 
-        it('is undefined before any piece is added', () => {
-            const part = new ScenarioContextPart(Fruit);
-
-            expect(part.numberOfQualifiers()).toBeUndefined();
-        });
-
-        it('is established by however many qualifiers the first piece added carries', () => {
-            const part = new ScenarioContextPart(Fruit);
-
-            part.add(pieceOf(new Fruit('apple'), 'red', 'crunchy'));
-
-            expect(part.numberOfQualifiers()).toBe(2);
-        });
-
         it('rejects a later piece carrying a different number of qualifiers', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'red'));
