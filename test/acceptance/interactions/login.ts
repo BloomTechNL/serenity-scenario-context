@@ -10,7 +10,8 @@ export const login = () =>
         const credentials = UseScenarioContext.as(actor)
             .withType(LoginCredentialContext)
             .withQualifiers(actorInTheSpotlight().name)
-            .findOne();
+            .findOne()
+            .getValue();
 
         const session = UseSupportDeskApi.as(actor).post<SessionRepresentation>('/login', {
             username: credentials.username,

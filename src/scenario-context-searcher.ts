@@ -1,5 +1,6 @@
 import { Constructor } from './constructor';
 import { ScenarioContext } from './scenario-context';
+import { ScenarioContextHandle } from './scenario-context-handle';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
@@ -54,13 +55,18 @@ export class ScenarioContextSearcher<Value> {
      * Use this method when you expect at most one matching piece to exist,
      * and want to be told if that assumption doesn't hold.
      *
+     * @returns a {@link ScenarioContextHandle} wrapping the value that was
+     *  found - call {@link ScenarioContextHandle#getValue} to get at the
+     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
+     *  it out for a new one.
+     *
      * @throws Error
      *  if no piece matches this search, or if more than one does. When
      *  several pieces match and picking whichever was used most recently
      *  is an acceptable way to resolve that ambiguity, use
      *  {@link ScenarioContextSearcher#findLastUsed} instead.
      */
-    findOne(): Value {
+    findOne(): ScenarioContextHandle<Value> {
         const matches = this.matchingPieces();
 
         if (matches.length === 0) {
@@ -74,7 +80,7 @@ export class ScenarioContextSearcher<Value> {
             );
         }
 
-        return this.putOnTopAndReturn(matches[0]);
+        return this.putOnTopAndWrap(matches[0]);
     }
 
     /**
@@ -83,17 +89,22 @@ export class ScenarioContextSearcher<Value> {
      * "in the spotlight". Unlike {@link ScenarioContextSearcher#findOne},
      * this method doesn't complain when several pieces match.
      *
+     * @returns a {@link ScenarioContextHandle} wrapping the value that was
+     *  found - call {@link ScenarioContextHandle#getValue} to get at the
+     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
+     *  it out for a new one.
+     *
      * @throws Error
      *  if no piece matches this search.
      */
-    findLastUsed(): Value {
+    findLastUsed(): ScenarioContextHandle<Value> {
         const matches = this.matchingPieces();
 
         if (matches.length === 0) {
             throw new Error(`Could not find ${ this.description() }`);
         }
 
-        return this.putOnTopAndReturn(matches[0]);
+        return this.putOnTopAndWrap(matches[0]);
     }
 
     private matchingPieces(): Array<ScenarioContextPiece<Value>> {
@@ -108,10 +119,10 @@ export class ScenarioContextSearcher<Value> {
         return matches;
     }
 
-    private putOnTopAndReturn(piece: ScenarioContextPiece<Value>): Value {
+    private putOnTopAndWrap(piece: ScenarioContextPiece<Value>): ScenarioContextHandle<Value> {
         this.scenarioContext.putOnTop(piece);
 
-        return piece.value;
+        return new ScenarioContextHandle(this.scenarioContext, piece);
     }
 
     private description(): string {

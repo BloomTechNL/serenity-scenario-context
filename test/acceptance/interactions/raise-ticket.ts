@@ -26,7 +26,7 @@ export const raiseTicket = (details: {
     subject?: string;
 } = {}) => {
     return Interaction.where(`#actor raises a ticket`, actor => {
-        const testId = UseScenarioContext.as(actor).withType(TestIdentificationContext).findOne().id;
+        const testId = UseScenarioContext.as(actor).withType(TestIdentificationContext).findOne().getValue().id;
         const subject = `${ details.subject ?? randomSubject() } [${ testId }]`;
 
         const response = UseSupportDeskApi.as(actor).post<TicketRepresentation>('/tickets', {

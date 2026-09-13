@@ -54,6 +54,29 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
     }
 
     /**
+     * Swaps `oldPiece` for `newPiece` in place, leaving the position of
+     * every other piece - and `newPiece`'s own position - unaffected. Used to
+     * replace a piece's value without disturbing where it sits in the stack,
+     * since a {@link ScenarioContextPiece} is itself immutable.
+     *
+     * @returns `newPiece`, for convenience.
+     *
+     * @throws Error
+     *  if `oldPiece` is not (or is no longer) part of this context.
+     */
+    replace<Value>(oldPiece: ScenarioContextPiece<Value>, newPiece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value> {
+        const index = this.pieces.indexOf(oldPiece);
+
+        if (index === -1) {
+            throw new Error('Could not replace the context piece because it is not part of this scenario context');
+        }
+
+        this.pieces[index] = newPiece;
+
+        return newPiece;
+    }
+
+    /**
      * Iterates over all the context pieces, top (most recently put) to
      * bottom (least recently put).
      */

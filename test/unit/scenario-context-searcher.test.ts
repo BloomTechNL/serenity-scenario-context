@@ -16,19 +16,19 @@ describe('ScenarioContextSearcher', () => {
 
     describe('findOne', () => {
 
-        it('returns the single value of the requested type', () => {
+        it('returns a handle on the single value of the requested type', () => {
             const context = new ScenarioContext();
             const apple = context.add(pieceOf(new Fruit('apple'))).value;
 
-            expect(new ScenarioContextSearcher(context, Fruit).findOne()).toBe(apple);
+            expect(new ScenarioContextSearcher(context, Fruit).findOne().getValue()).toBe(apple);
         });
 
-        it('returns the single value further narrowed down by qualifiers', () => {
+        it('returns a handle on the single value further narrowed down by qualifiers', () => {
             const context = new ScenarioContext();
             const apple = context.add(pieceOf(new Fruit('apple'), 'crunchy', 'red')).value;
 
             expect(
-                new ScenarioContextSearcher(context, Fruit).withQualifiers('red').findOne()
+                new ScenarioContextSearcher(context, Fruit).withQualifiers('red').findOne().getValue()
             ).toBe(apple);
         });
 
@@ -36,7 +36,7 @@ describe('ScenarioContextSearcher', () => {
             const context = new ScenarioContext();
             const carrot = context.add(pieceOf(new Vegetable('carrot'))).value;
 
-            expect(new ScenarioContextSearcher(context, Vegetable).findOne()).toBe(carrot);
+            expect(new ScenarioContextSearcher(context, Vegetable).findOne().getValue()).toBe(carrot);
             expect(() => new ScenarioContextSearcher(context, Fruit).findOne()).toThrow();
         });
 
@@ -83,12 +83,12 @@ describe('ScenarioContextSearcher', () => {
 
     describe('findLastUsed', () => {
 
-        it('returns the most recently added match, without complaining about the ambiguity', () => {
+        it('returns a handle on the most recently added match, without complaining about the ambiguity', () => {
             const context = new ScenarioContext();
             context.add(pieceOf(new Fruit('apple')));
             const banana = context.add(pieceOf(new Fruit('banana'))).value;
 
-            expect(new ScenarioContextSearcher(context, Fruit).findLastUsed()).toBe(banana);
+            expect(new ScenarioContextSearcher(context, Fruit).findLastUsed().getValue()).toBe(banana);
         });
 
         it('still respects any requested qualifiers when picking the most recently used match', () => {
@@ -97,7 +97,7 @@ describe('ScenarioContextSearcher', () => {
             context.add(pieceOf(new Fruit('banana'), 'soft'));  // on top, but doesn't match
 
             expect(
-                new ScenarioContextSearcher(context, Fruit).withQualifiers('crunchy').findLastUsed()
+                new ScenarioContextSearcher(context, Fruit).withQualifiers('crunchy').findLastUsed().getValue()
             ).toBe(crunchyApple);
         });
 
@@ -122,6 +122,51 @@ describe('ScenarioContextSearcher', () => {
         });
     });
 
+    describe('the returned handle', () => {
+
+        it('lets the found value be replaced, in place, via replaceValue', () => {
+            const context = new ScenarioContext();
+            const apple  = pieceOf(new Fruit('apple'), 'crunchy');
+            const banana = pieceOf(new Fruit('banana'));
+            context.add(apple);
+            context.add(banana);  // banana is now on top
+
+            const found = new ScenarioContextSearcher(context, Fruit).withQualifiers('crunchy').findOne();
+            const greenApple = new Fruit('green apple');
+
+            found.replaceValue(greenApple);
+
+            expect(found.getValue()).toBe(greenApple);
+            expect(Array.from(context)[0].value).toBe(greenApple);
+            expect(Array.from(context)).toHaveLength(2);  // no duplicate was created
+        });
+
+        it('carries the original qualifiers over to the replacement value', () => {
+            const context = new ScenarioContext();
+            context.add(pieceOf(new Fruit('apple'), 'crunchy', 'red'));
+
+            const found = new ScenarioContextSearcher(context, Fruit).findOne();
+            found.replaceValue(new Fruit('green apple'));
+
+            expect(
+                new ScenarioContextSearcher(context, Fruit).withQualifiers('crunchy', 'red').findOne().getValue()
+            ).toBeInstanceOf(Fruit);
+        });
+
+        it('lets a later search find the replacement value', () => {
+            const context = new ScenarioContext();
+            context.add(pieceOf(new Fruit('apple'), 'crunchy'));
+
+            const found = new ScenarioContextSearcher(context, Fruit).findOne();
+            const greenApple = new Fruit('green apple');
+            found.replaceValue(greenApple);
+
+            expect(
+                new ScenarioContextSearcher(context, Fruit).withQualifiers('crunchy').findOne().getValue()
+            ).toBe(greenApple);
+        });
+    });
+
     describe('withQualifiers', () => {
 
         it('returns a new searcher, leaving the original one unaffected', () => {
@@ -133,8 +178,8 @@ describe('ScenarioContextSearcher', () => {
             expect(redFruit).not.toBe(anyFruit);
             context.add(pieceOf(new Fruit('banana'), 'yellow'));
 
-            expect(anyFruit.findOne()).toBeInstanceOf(Fruit);           // still matches any Fruit
-            expect(() => redFruit.findOne()).toThrow();                 // still requires 'red'
+            expect(anyFruit.findOne().getValue()).toBeInstanceOf(Fruit);   // still matches any Fruit
+            expect(() => redFruit.findOne()).toThrow();                    // still requires 'red'
         });
 
         it('accumulates qualifiers across multiple calls', () => {
@@ -146,7 +191,7 @@ describe('ScenarioContextSearcher', () => {
                 .withQualifiers('crunchy')
                 .withQualifiers('green');
 
-            expect(searcher.findOne()).toBe(greenApple);
+            expect(searcher.findOne().getValue()).toBe(greenApple);
         });
     });
 });

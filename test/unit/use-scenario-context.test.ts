@@ -12,7 +12,7 @@ describe('UseScenarioContext', () => {
 
         ability.add(new Fruit('apple'));
 
-        expect(ability.withType(Fruit).findOne()).toBeInstanceOf(Fruit);
+        expect(ability.withType(Fruit).findOne().getValue()).toBeInstanceOf(Fruit);
     });
 
     describe('add', () => {
@@ -23,7 +23,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple);
 
-            expect(ability.withType(Fruit).findOne()).toBe(apple);
+            expect(ability.withType(Fruit).findOne().getValue()).toBe(apple);
         });
 
         it('makes the value findable by its type and qualifiers', () => {
@@ -32,7 +32,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple, 'crunchy', 'red');
 
-            expect(ability.withType(Fruit).withQualifiers('red').findOne()).toBe(apple);
+            expect(ability.withType(Fruit).withQualifiers('red').findOne().getValue()).toBe(apple);
         });
 
         it('returns the context piece that was created, for convenience', () => {
@@ -63,7 +63,7 @@ describe('UseScenarioContext', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = ability.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.withType(Fruit).withQualifiers('crunchy').findOne()).toBe(apple);
+            expect(ability.withType(Fruit).withQualifiers('crunchy').findOne().getValue()).toBe(apple);
         });
 
         it('lets the most recently used match be found with findLastUsed(), even when several exist', () => {
@@ -71,7 +71,7 @@ describe('UseScenarioContext', () => {
             ability.add(new Fruit('apple'));
             const banana = ability.add(new Fruit('banana')).value;
 
-            expect(ability.withType(Fruit).findLastUsed()).toBe(banana);
+            expect(ability.withType(Fruit).findLastUsed().getValue()).toBe(banana);
         });
     });
 });

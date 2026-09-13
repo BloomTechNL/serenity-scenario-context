@@ -14,8 +14,8 @@ export const resolveTicket = (label?: string) =>
             const searcher = scenarioContext.withType(TicketContext);
 
             const ticket = label
-                ? searcher.withQualifiers(label).findOne()
-                : searcher.findLastUsed();
+                ? searcher.withQualifiers(label).findOne().getValue()
+                : searcher.findLastUsed().getValue();
 
             UseSupportDeskApi.as(actor).post<TicketRepresentation>(
                 `/tickets/${ ticket.id }/resolve`, undefined, 200,

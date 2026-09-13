@@ -26,8 +26,8 @@ Concretely:
 | Organised by                      | a key you choose                           | the value's own type, an ordered stack                          |
 | Telling two values apart          | give them different keys                   | free-form `qualifiers`, any number of them, in any combination  |
 | "The one I was just using"        | not tracked - you'd track it yourself       | built in: adding or finding a piece puts it "in the spotlight"  |
-| Retrieving without an exact key   | not possible                                | `withType(Type).findLastUsed()`                                 |
-| Retrieving something specific     | `notes().get('the-exact-key')`             | `withType(Type).withQualifiers(...).findOne()`                   |
+| Retrieving without an exact key   | not possible                                | `withType(Type).findLastUsed().getValue()`                      |
+| Retrieving something specific     | `notes().get('the-exact-key')`             | `withType(Type).withQualifiers(...).findOne().getValue()`        |
 | Ambiguity (two things could match)| whichever one you happen to `get`           | `findOne()` throws - it never silently guesses                  |
 
 For example, an actor that raises a `billing` ticket and then a `login`
@@ -43,11 +43,11 @@ UseScenarioContext.as(actor).add(loginTicket, 'login');
 
 // whichever Ticket was added or found most recently - the login ticket,
 // since it was the last one added and nothing has searched yet:
-UseScenarioContext.as(actor).withType(Ticket).findLastUsed();
+UseScenarioContext.as(actor).withType(Ticket).findLastUsed().getValue();
 
 // the one labelled 'billing', found unambiguously by type + qualifier -
 // note that finding it also puts it back in the spotlight:
-UseScenarioContext.as(actor).withType(Ticket).withQualifiers('billing').findOne();
+UseScenarioContext.as(actor).withType(Ticket).withQualifiers('billing').findOne().getValue();
 ```
 
 If your scenario only ever needs one value per name, reach for `Notes` -
@@ -78,6 +78,16 @@ rather than by a key invented purely for storage.
   Either way, the piece that's found is put back on top of the context -
   "in the spotlight" - so that whatever you search for next, without being
   overly specific, tends to find what you were just working with.
+- [`ScenarioContextHandle`](src/scenario-context-handle.ts) - what `findOne()`
+  and `findLastUsed()` actually return, rather than the value itself:
+  - `getValue()` - the value that was found;
+  - `replaceValue(newValue)` - swaps it out for `newValue`, keeping the same
+    qualifiers and the same spot in the scenario context. Reach for this
+    once you've found a piece of context, derived something new from its
+    value, and want that new value to take its place - e.g. replacing a
+    `Ticket` that's still `'open'` with the `'resolved'` version of itself,
+    without losing track of it under whichever qualifiers it was raised
+    with.
 
 ## Usage
 
@@ -98,13 +108,21 @@ const raiseTicket = (ticket: Ticket, label?: string) =>
         UseScenarioContext.as(actor).add(ticket, ...(label ? [ label ] : []));
     });
 
+const resolveTicketLabelled = (label: string) =>
+    Interaction.where(`#actor resolves the ticket labelled ${ label }`, actor => {
+        const found = UseScenarioContext.as(actor).withType(Ticket).withQualifiers(label).findOne();
+
+        // same id and label, new status - and it stays right where it was:
+        found.replaceValue(new Ticket(found.getValue().id, 'resolved'));
+    });
+
 const theTicketLabelled = (label: string) =>
     Question.about(`the ticket labelled ${ label }`, actor =>
-        UseScenarioContext.as(actor).withType(Ticket).withQualifiers(label).findOne());
+        UseScenarioContext.as(actor).withType(Ticket).withQualifiers(label).findOne().getValue());
 
 const theTicketInTheSpotlight = () =>
     Question.about('the ticket in the spotlight', actor =>
-        UseScenarioContext.as(actor).withType(Ticket).findLastUsed());
+        UseScenarioContext.as(actor).withType(Ticket).findLastUsed().getValue());
 
 await actorCalled('Alice')
     .whoCan(UseScenarioContext.using())
@@ -116,6 +134,9 @@ await actorCalled('Alice')
         // something else is added or found, moving it back to the top:
         Ensure.that(theTicketInTheSpotlight(), equals(new Ticket('TICKET-2', 'open'))),
         Ensure.that(theTicketLabelled('billing'), equals(new Ticket('TICKET-1', 'open'))),
+
+        resolveTicketLabelled('billing'),
+        Ensure.that(theTicketLabelled('billing'), equals(new Ticket('TICKET-1', 'resolved'))),
     );
 ```
 

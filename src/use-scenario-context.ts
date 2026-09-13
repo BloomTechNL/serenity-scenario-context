@@ -40,6 +40,9 @@ import { ScenarioContextSearcher } from './scenario-context-searcher';
  *
  * // when several might match, and the most recently used one will do:
  * const ticket = UseScenarioContext.as(actor).withType(Ticket).findLastUsed();
+ *
+ * ticket.getValue();               // the Ticket itself
+ * ticket.replaceValue(newTicket);  // swaps it out for newTicket, in place
  * ```
  *
  * Finding a piece of context puts it "in the spotlight" - i.e. on top of

@@ -101,4 +101,43 @@ describe('ScenarioContext', () => {
             );
         });
     });
+
+    describe('replace', () => {
+
+        it('swaps an existing piece for a new one, in the same position', () => {
+            const context = new ScenarioContext();
+            const first  = new ScenarioContextPiece('first');
+            const second = new ScenarioContextPiece('second');
+            const third  = new ScenarioContextPiece('third');
+
+            context.add(first);
+            context.add(second);
+            context.add(third);
+
+            const replacement = new ScenarioContextPiece('replacement');
+            context.replace(second, replacement);
+
+            expect(Array.from(context)).toEqual([ third, replacement, first ]);
+        });
+
+        it('returns the new piece, for convenience', () => {
+            const context = new ScenarioContext();
+            const original = new ScenarioContextPiece('original');
+            context.add(original);
+
+            const replacement = new ScenarioContextPiece('replacement');
+
+            expect(context.replace(original, replacement)).toBe(replacement);
+        });
+
+        it('throws when the piece to be replaced has never been part of this context', () => {
+            const context = new ScenarioContext();
+            const foreign = new ScenarioContextPiece('not part of this context');
+            const replacement = new ScenarioContextPiece('replacement');
+
+            expect(() => context.replace(foreign, replacement)).toThrow(
+                'Could not replace the context piece because it is not part of this scenario context'
+            );
+        });
+    });
 });
