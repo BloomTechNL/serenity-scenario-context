@@ -5,205 +5,155 @@ advanced form of notes: a **scenario context** of typed, qualified pieces of
 information, where the piece most recently added or looked up is always
 "in the spotlight".
 
-## How is this different from Serenity/JS's `Notes`?
+## Why use this instead of `Notes`?
 
 Serenity/JS already ships an `Ability` for remembering things: `TakeNotes`,
-backed by a `Notepad`. It's a flat key/value store - `notes().set('key',
-value)`, `notes().get('key')` - and it's a great fit when there's one value
-per name and you know that name upfront.
+backed by a `Notepad<Notes>`. It's a fine choice for a lot of scenarios -
+`UseScenarioContext` earns its place instead for two reasons.
 
-`ScenarioContext` is for a different shape of problem: when an actor may be
-holding onto **several objects of the same type at once**, and what you want
-back isn't "whatever is stored under this exact key" but "the `Ticket` I
-just raised", or "the `Ticket` labelled `billing`", without having invented
-and threaded a unique string key through the whole scenario for every one of
-them.
+### 1. No single "god" notes type to maintain
 
-Concretely:
-
-|                                   | `Notes`                                   | `ScenarioContext`                                             |
-|-----------------------------------|--------------------------------------------|----------------------------------------------------------------|
-| Organised by                      | a key you choose                           | the value's own type, an ordered stack                          |
-| Telling two values apart          | give them different keys                   | free-form `qualifiers`, any number of them, in any combination  |
-| "The one I was just using"        | not tracked - you'd track it yourself       | built in: adding or finding a piece puts it "in the spotlight"  |
-| Retrieving without an exact key   | not possible                                | `find(Type)`                                                     |
-| Retrieving something specific     | `notes().get('the-exact-key')`             | `find(Type, ...qualifiers)`                                       |
-| Ambiguity (two things could match)| whichever one you happen to `get`           | give it enough qualifiers and it's unambiguous by construction   |
-
-For example, an actor that raises a `billing` ticket and then a `login`
-ticket, and later wants to resolve "the ticket labelled `billing`", or
-"whichever ticket I was just looking at" - with `Notes` you'd need to invent
-and remember distinct keys (`'ticket-billing'`, `'ticket-login'`) and there's
-no way to ask for "the most recent one" without also tracking that
-separately. With `ScenarioContext`:
+A `Notepad` is typed by one `Notes` interface, declared up front, that has
+to know about every single thing any scenario might ever want to remember:
 
 ```ts
-UseScenarioContext.as(actor).add(billingTicket, 'billing');
-UseScenarioContext.as(actor).add(loginTicket, 'login');
-
-// whichever Ticket was added or found most recently - the login ticket,
-// since it was the last one added and nothing has searched yet:
-UseScenarioContext.as(actor).find(Ticket);
-
-// the one labelled 'billing', found unambiguously by type + qualifier -
-// note that finding it also puts it back in the spotlight:
-UseScenarioContext.as(actor).find(Ticket, 'billing');
+interface Notes {
+    ticket: Ticket;
+    session: SessionRepresentation;
+    credentials: LoginCredentialContext;
+    // ...and everything else, forever
+}
 ```
 
-If your scenario only ever needs one value per name, reach for `Notes` -
-it's simpler. Reach for `ScenarioContext` once you have several instances of
-the same domain type in play and want to recall them the way you'd talk
-about them - by type, and by how you'd describe or most recently used one -
-rather than by a key invented purely for storage.
+Every new kind of thing worth remembering means growing this one, shared
+interface - even when it has nothing to do with the scenarios that already
+use it. `UseScenarioContext` needs no such thing:
 
-## The building blocks
+```ts
+UseScenarioContext.as(actor).add(ticket, 'billing');
+UseScenarioContext.as(actor).add(session);
+```
 
-- [`ScenarioContextPiece`](src/scenario-context-piece.ts) - pairs an
-  arbitrary domain object (`value`) with a set of free-form string
-  qualifiers. Its qualifiers never change once set, but its value can be
-  swapped out via `replace(newValue)` - in place, without disturbing its
-  identity or its position in whichever `ScenarioContextPart` holds it.
-  This is what `findPiece` (below) returns.
-- [`ScenarioContextPart`](src/scenario-context-part.ts) - holds every piece
-  of *one particular type*, as an ordered stack of its own: the piece that
-  was put on top most recently is what a search prefers when several match.
-  It's also where the two invariants that type is held to live:
-  - every piece of that type is qualified by the same, fixed *number* of
-    qualifiers - however many the first piece of that type was added with;
-  - no two pieces of that type carry the exact same *combination* of
-    qualifiers - the combination acts like a composite key.
+Add any object of any type, the moment you first need to remember it - it's
+found again later by its own runtime type, not a key you had to register
+somewhere central first.
 
-  Both exist so that a search using exactly that many qualifiers can never
-  be ambiguous, which is what lets `find`/`findPiece` (below) decide how to
-  resolve a search on your behalf. A consequence worth knowing: if some
-  `Ticket`s in your scenario are labelled and others aren't, they still all
-  need the *same number* of qualifiers - see the callout under Usage below
-  for how to handle that.
+### 2. Omit the qualifier, and get back whatever you used last - for specs that read naturally
 
-  Because a part only ever holds pieces of one type, it can resolve a
-  search entirely on its own - no separate "searcher" needed. Both
-  `find(...qualifiers)` and `findPiece(...qualifiers)` decide how to
-  resolve the search the same way, based on how many `qualifiers` you give
-  relative to the type's fixed qualifier count:
-  - given exactly that many, there can be at most one match - unambiguous
-    by construction, since no two pieces of the same type ever share a
-    combination of qualifiers;
-  - given fewer, several pieces might still match, so whichever one was put
-    on top of the part most recently is returned, no questions asked;
-  - given more, it throws outright, since no piece could possibly have
-    that many qualifiers.
+A `Notepad` needs a full, exact key every single time you want something
+back - there's no such thing as "whichever one I was just working with" or
+"the ticket, if there's only one". Every retrieval has to name its key in
+full, whether or not there was ever any ambiguity to resolve.
 
-  Handy for something like "the ticket labelled `label`, when `label` was
-  given, or the ticket in the spotlight otherwise" without spelling out the
-  `? :` every time. Either way, the match is put back on top of the part -
-  "in the spotlight" - so that whatever you search for next, without being
-  overly specific, tends to find what you were just working with.
+Real specs don't talk like that. "The actor raises a ticket, then resolves
+it" doesn't restate *which* ticket the second time - "it" defaults to
+whichever one is topical, the one just raised. `UseScenarioContext` lets
+your step definitions read the same way, because a qualifier is something
+you can supply *or leave out*, on both ends:
 
-  The only difference between the two is what you get back: `find` returns
-  the value itself - reach for this most of the time - while `findPiece`
-  returns the whole `ScenarioContextPiece`, which is what you want only
-  when you'll be swapping the value out afterwards: read `piece.value` to
-  get at the value, or `piece.replace(newValue)` to swap it out for a new
-  one - e.g. replacing a `Ticket` that's still `'open'` with the
-  `'resolved'` version of itself, without losing track of it under
-  whichever qualifiers it was raised with.
-- [`ScenarioContext`](src/scenario-context.ts) - little more than a registry
-  of one `ScenarioContextPart` per type: `add(value, ...qualifiers)` builds
-  a piece and puts it on top of the right part, creating that part on first
-  use, and `partFor(type)` hands out the part for a given type.
-- [`UseScenarioContext`](src/use-scenario-context.ts) - the Serenity/JS
-  `Ability`. Actors use it to `add` domain objects, qualified however you
-  like, and `find(Type, ...qualifiers)` / `findPiece(Type, ...qualifiers)`
-  to search for one again - each just looks up the `ScenarioContextPart`
-  for `Type` and calls the method of the same name on it, so there's no
-  separate step to get at the part yourself.
-- [`scenario-context-errors.ts`](src/scenario-context-errors.ts) - a named
-  `Error` subclass for each way `add`/`find` can fail
-  (`UnexpectedQualifierCountError`, `DuplicateQualifiersError`,
-  `TooManyQualifiersError`, `PieceNotFoundError`), so a caller that cares can
-  tell them apart with `instanceof` instead of matching on message text.
+```ts
+const raiseTicket = (ticket: Ticket, label?: string) =>
+    Interaction.where(`#actor raises a ticket`, actor =>
+        UseScenarioContext.as(actor).add(ticket, label ?? randomUUID()));
+
+const resolveTicket = (label?: string) =>
+    Interaction.where(`#actor resolves a ticket`, actor => {
+        const qualifiers = label ? [ label ] : [];
+        const found = UseScenarioContext.as(actor).findPiece(Ticket, ...qualifiers);
+        found.replace(new Ticket(found.value.id, 'resolved'));
+    });
+```
+
+```ts
+actor.attemptsTo(
+    raiseTicket(ticket),   // no label to invent
+    resolveTicket(),       // "the ticket" - resolves whichever was just raised
+);
+```
+
+Label a `Ticket` when a scenario genuinely needs to tell several of them
+apart later, and leave it unlabelled the rest of the time - either way, "the
+one I mean" is resolved for you, the same way it would be in a sentence.
+Reach for `UseScenarioContext` once you'd rather write specs this way than
+invent and thread a key through every step that touches a value.
 
 ## Usage
 
+### Remembering something
+
 ```ts
-import { randomUUID } from 'node:crypto';
-import { actorCalled, Interaction, Question } from '@serenity-js/core';
-import { Ensure, equals } from '@serenity-js/assertions';
-import { UseScenarioContext } from 'serenity-scenario-context';
-
-class Ticket {
-    constructor(
-        public readonly id: string,
-        public readonly status: 'open' | 'resolved',
-    ) {}
-}
-
-const raiseTicket = (ticket: Ticket, label?: string) =>
-    Interaction.where(`#actor raises ticket ${ ticket.id }`, actor => {
-        // every Ticket gets exactly one qualifier - the label it was given,
-        // or an anonymous one nobody's likely to search for - so labelled
-        // and unlabelled tickets can still coexist (see the callout below).
-        UseScenarioContext.as(actor).add(ticket, label ?? randomUUID());
-    });
-
-const resolveTicketLabelled = (label: string) =>
-    Interaction.where(`#actor resolves the ticket labelled ${ label }`, actor => {
-        // findPiece, not find, since we're about to replace what it found:
-        const found = UseScenarioContext.as(actor).findPiece(Ticket, label);
-
-        // same id and label, new status - and it stays right where it was:
-        found.replace(new Ticket(found.value.id, 'resolved'));
-    });
-
-const theTicketLabelled = (label: string) =>
-    Question.about(`the ticket labelled ${ label }`, actor =>
-        UseScenarioContext.as(actor).find(Ticket, label));
-
-const theTicketInTheSpotlight = () =>
-    Question.about('the ticket in the spotlight', actor =>
-        UseScenarioContext.as(actor).find(Ticket));
-
-await actorCalled('Alice')
-    .whoCan(UseScenarioContext.using())
-    .attemptsTo(
-        raiseTicket(new Ticket('TICKET-1', 'open'), 'billing'),
-        raiseTicket(new Ticket('TICKET-2', 'open'), 'login'),
-
-        // 'login' was raised last, so it's the one in the spotlight - until
-        // something else is added or found, moving it back to the top:
-        Ensure.that(theTicketInTheSpotlight(), equals(new Ticket('TICKET-2', 'open'))),
-        Ensure.that(theTicketLabelled('billing'), equals(new Ticket('TICKET-1', 'open'))),
-
-        resolveTicketLabelled('billing'),
-        Ensure.that(theTicketLabelled('billing'), equals(new Ticket('TICKET-1', 'resolved'))),
-    );
+UseScenarioContext.as(actor).add(ticket, 'billing');
 ```
 
-A few things worth calling out:
+`add` takes the value and any number of free-form `qualifiers` describing
+it. Qualifiers are entirely up to you - an id, a label, a status, several of
+those at once - whatever makes it possible to tell this value apart from
+others of the same type later on.
 
-- `add`/`find`/`findPiece` never take the actor as an argument -
-  like any Serenity/JS `Interaction` or `Question`, `raiseTicket(...)` and
-  `theTicketLabelled(...)` are only handed the actor performing or asking
-  them once they actually run, via `attemptsTo`/`Ensure.that` - not by the
-  code that builds them.
-- Every `Ticket` here is qualified by exactly one qualifier, whether or not
-  the caller supplied a `label` - because the *number* of qualifiers a type
-  is qualified by is fixed the moment the first one is added (see
-  [`ScenarioContext`](#the-building-blocks) above). If `raiseTicket` added
-  `ticket` with *no* qualifiers whenever `label` was omitted, the very
-  first unlabelled ticket in a scenario would fix the count at `0` - and
-  every labelled one raised afterwards (or before) would then be rejected,
-  and vice versa. Generating an anonymous qualifier when none is given
-  keeps the count consistently at `1` either way; [the real
-  `raiseTicket`](test/acceptance/interactions/raise-ticket.ts) in this
-  repo's acceptance tests does exactly this. If every `Ticket` you ever add
-  either always has a label or never does, you don't need to think about
-  this at all - the count is simply whatever the first one happens to be.
-- Qualifiers are optional and free-form: `add(ticket)` on its own is fine
-  when there's only ever going to be one `Ticket` around, or when
-  `find(Ticket)` - with no qualifiers - is all you'll ever need.
-- `UseScenarioContext.using()` with no argument gives the actor a fresh,
-  empty `ScenarioContext` of their own; pass an existing `ScenarioContext`
-  instance instead when you want several actors to share one (see
-  [`test/acceptance/cast.ts`](test/acceptance/cast.ts) for a worked
-  example).
+### Recalling something
+
+```ts
+// when the value itself is all you need:
+const ticket = UseScenarioContext.as(actor).find(Ticket, 'billing');
+
+// when you'll want to swap it out afterwards:
+const found = UseScenarioContext.as(actor).findPiece(Ticket, 'billing');
+found.replace(resolvedTicket); // swaps it out for resolvedTicket, in place
+```
+
+`find` and `findPiece` both search for a value of the given type, qualified
+by whatever you pass in:
+
+- give no qualifiers at all, and you get back whichever value of that type
+  was added or found most recently - "the one in the spotlight";
+- give some, but not enough to identify a value exactly, and you get back
+  whichever matching value is currently in the spotlight;
+- give enough qualifiers to identify a value exactly, and the match is
+  unambiguous - there's never a need to pick between several equally good
+  candidates;
+- give more qualifiers than any value of that type could possibly have, and
+  it throws rather than searching for something that can't exist.
+
+The only difference between the two: `find` returns the value itself, which
+is what you want most of the time. `findPiece` returns a handle on it
+instead - call `.value` to read it, or `.replace(newValue)` to swap it out
+for something new, in place, without losing track of whichever qualifiers
+it was found by. Reach for `findPiece` only when you're about to replace
+what you found.
+
+Finding a value - with either method - puts it back "in the spotlight", so
+that a later, less specific search is more likely to find it again.
+
+### Qualifying values consistently
+
+Every value of a given type needs to be qualified by the same *number* of
+qualifiers, whatever that number turns out to be for the first one you add.
+So if some `Ticket`s in your scenario are labelled and others aren't, give
+the unlabelled ones a qualifier too - a random, unique one nobody's likely
+to search for - rather than leaving them with none:
+
+```ts
+import { randomUUID } from 'node:crypto';
+
+const raiseTicket = (ticket: Ticket, label?: string) =>
+    Interaction.where(`#actor raises ticket ${ ticket.id }`, actor =>
+        UseScenarioContext.as(actor).add(ticket, label ?? randomUUID()));
+```
+
+That way, labelled and unlabelled tickets can coexist: every `Ticket` ends
+up qualified by exactly one qualifier, whether or not the caller supplied
+one. If every value of a type you ever add either always has a label or
+never does, you don't need to think about this at all.
+
+### Sharing a scenario context across actors
+
+```ts
+const sharedContext = new ScenarioContext();
+
+actorCalled('Alice').whoCan(UseScenarioContext.using(sharedContext));
+actorCalled('Bob').whoCan(UseScenarioContext.using(sharedContext));
+```
+
+`UseScenarioContext.using()` with no argument gives an actor a fresh, empty
+context of their own. Pass an existing `ScenarioContext` instead when you
+want several actors - or a whole `Cast` - to share one.
