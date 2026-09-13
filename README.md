@@ -154,18 +154,6 @@ bob.whoCan(UseScenarioContext.using(context));
 
 State added by one actor can therefore be retrieved by another.
 
-## When should I use it?
-
-Use `ScenarioContext` when:
-
-* capabilities should contribute scenario state independently;
-* you want to avoid a central `Notes` type;
-* scenarios contain multiple instances of the same type;
-* the latest object naturally represents the current focus;
-* qualifiers are useful for selecting a specific object.
-
-For small, stable scenario state, native Serenity/JS `Notepad` may be the simpler choice.
-
 ## In short
 
 `Notepad` is a **named scenario state store**.
