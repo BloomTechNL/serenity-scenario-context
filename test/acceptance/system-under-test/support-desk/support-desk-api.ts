@@ -31,37 +31,6 @@ export interface SessionRepresentation {
     username: string;
 }
 
-/**
- * A fake "support desk" system, exposed the same way a real one would be:
- * over an HTTP-like API of resources - tickets, and the agent accounts
- * needed to get at them - rather than as plain objects the tests can reach
- * into and mutate directly.
- *
- * Everything other than `/register` and `/login` requires a valid session,
- * the same way a real support desk wouldn't let an anonymous caller raise,
- * resolve or search for tickets.
- *
- * There's no real networking, framework or persistence here - `get`/`post`
- * are plain, synchronous, in-memory calls - but as far as anything calling
- * them is concerned, it behaves like a small REST API: a request comes in,
- * gets routed to a resource, and comes back with a status code and a body.
- *
- * Ticket ids are generated here, by the system - the same way a real
- * backend would hand out its own opaque, unique ids rather than let a
- * caller pick them. Anything that wants a human-readable way to refer back
- * to a ticket has to keep its own record of which id that was - which is
- * exactly what `UseScenarioContext` is for.
- *
- * There's a single instance of this class, shared across every scenario -
- * `instance()` always returns the same one - the same way a real support
- * desk would keep its tickets (and its registered agents) in one backend,
- * not spin up a fresh one per test. Tickets raised in one scenario are
- * still there in the next, which is what makes referring to them by id,
- * rather than by position, actually matter - and why anything searching by
- * subject needs to be specific enough to tell its own tickets apart from
- * everyone else's, and every agent needs to register under its own,
- * unique username.
- */
 export class SupportDeskApi implements HttpApi {
 
     private static readonly shared = new SupportDeskApi();
@@ -124,11 +93,6 @@ export class SupportDeskApi implements HttpApi {
         return { status: 404, body: { error: `No such endpoint: ${ path }` } };
     }
 
-    /**
-     * Registers a new agent account, the same way a real support desk would
-     * require an agent to be provisioned before they can log in. Usernames
-     * are taken on a first-come, first-served basis, same as any real sign-up.
-     */
     private register(payload: Partial<Credentials> = {}): HttpResponse<AccountRepresentation | ErrorRepresentation> {
         const { username, password } = payload;
 
@@ -145,11 +109,6 @@ export class SupportDeskApi implements HttpApi {
         return { status: 201, body: { username } };
     }
 
-    /**
-     * Exchanges a username and password for a session - only agents that
-     * have already registered (via `/register`) are ever accepted, the same
-     * way a real support desk would only let provisioned agents in.
-     */
     private login(payload: Partial<Credentials> = {}): HttpResponse<SessionRepresentation | ErrorRepresentation> {
         const { username, password } = payload;
 
@@ -167,12 +126,6 @@ export class SupportDeskApi implements HttpApi {
         return { status: 200, body: { token, username } };
     }
 
-    /**
-     * Every endpoint other than `/register` and `/login` needs a valid
-     * session - a `Bearer` token from a prior login - the same way a real
-     * support desk wouldn't let anyone touch a ticket before proving who
-     * they are.
-     */
     private requireSession(headers: Record<string, string>): HttpResponse<ErrorRepresentation> | undefined {
         const authorization = headers.Authorization ?? '';
         const [ scheme, token ] = authorization.split(' ');
@@ -197,20 +150,6 @@ export class SupportDeskApi implements HttpApi {
         return { status: 201, body: ticket };
     }
 
-    /**
-     * A case-insensitive, "contains" search over every ticket's subject -
-     * not an exact match - the same way a support agent would search a real
-     * helpdesk: by whatever part of the subject they remember, not the
-     * whole thing verbatim.
-     *
-     * `testId`, when given, narrows the search down further to tickets
-     * whose subject also contains it. It's a second, independent "contains"
-     * check rather than something folded into `subject`, so a caller can
-     * search by any fragment of the subject - not just one that happens to
-     * sit right next to the test id - and still only ever see tickets
-     * raised by its own scenario, not ones left behind by every other
-     * scenario sharing this same, singleton backend.
-     */
     private searchTicketsBySubject(
         subject: string | null,
         testId: string | null,
@@ -240,10 +179,6 @@ export class SupportDeskApi implements HttpApi {
         return { status: 200, body: resolved };
     }
 
-    /**
-     * Changes the subject of an existing ticket, in place - its id, priority
-     * and status are all left untouched.
-     */
     private changeTicketSubject(id: string, payload: Partial<NewTicket> = {}): HttpResponse<TicketRepresentation | ErrorRepresentation> {
         const { subject } = payload;
 

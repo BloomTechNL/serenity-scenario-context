@@ -4,26 +4,9 @@
  * A piece pairs an arbitrary domain object (the {@link ScenarioContextPiece#value})
  * with a set of free-form `qualifiers` - short labels that make it possible
  * to tell apart several pieces holding objects of the same type, e.g. several
- * `Ticket` instances qualified by their id, or by their priority.
- *
- * A piece's qualifiers, once set, never change - they're what a
- * {@link ScenarioContextPart} uses to tell same-typed pieces apart, so
- * swapping them out from under it would be unsound. Its `value` can be
- * swapped out, though, via {@link ScenarioContextPiece#replace} - which
- * updates what a piece holds without disturbing its identity, its
- * qualifiers, or its position in the {@link ScenarioContextPart} that holds
- * it. This is what {@link ScenarioContextPart#findPiece} returns - reach
- * for that, rather than {@link ScenarioContextPart#find}, whenever you'll
- * want to update the value in place once you've found it:
- *
- * ```ts
- * const ticket = UseScenarioContext.as(actor).findPiece(Ticket);
- *
- * ticket.replace(ticket.value.resolve());
- *
- * // subsequent searches, and this piece, now see the resolved ticket:
- * ticket.value.status; // 'resolved'
- * ```
+ * `Ticket` instances qualified by their id, or by their priority. Qualifiers,
+ * once set, never change; the value can be swapped out via
+ * {@link ScenarioContextPiece#replace}.
  */
 export class ScenarioContextPiece<Value = unknown> {
 

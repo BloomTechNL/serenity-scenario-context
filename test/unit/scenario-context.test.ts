@@ -1,7 +1,5 @@
 import { ScenarioContext, ScenarioContextPart } from '../../src';
 
-// Two unrelated fixture types, used to prove that pieces are routed to a
-// part per type.
 class Widget {
     constructor(public readonly name: string) {
     }

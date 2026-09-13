@@ -79,20 +79,10 @@ export class UseScenarioContext extends Ability {
     }
 
     /**
-     * Finds the value of `type`, qualified by every one of `qualifiers`, the
-     * way {@link ScenarioContextPart#find} describes: given exactly as many
-     * qualifiers as `type` takes, there can be at most one match - unambiguous
-     * by construction; given fewer, whichever match was put on top of the
-     * scenario context most recently is returned, no questions asked; given
-     * more than `type` takes, this throws rather than searching for
-     * something that can't exist.
-     *
-     * Reach for {@link UseScenarioContext#findPiece} instead when you'll
-     * want to swap the value out afterwards.
-     *
-     * @throws Error
-     *  if more qualifiers are given than `type` takes, or if no piece
-     *  matches `qualifiers`.
+     * Finds the value of `type`, qualified by every one of `qualifiers` -
+     * see {@link ScenarioContextPart#find}. Reach for
+     * {@link UseScenarioContext#findPiece} instead when you'll want to swap
+     * the value out afterwards.
      */
     find<Value>(type: Constructor<Value>, ...qualifiers: string[]): Value {
         return this.scenarioContext.partFor(type).find(...qualifiers);
@@ -103,10 +93,6 @@ export class UseScenarioContext extends Ability {
      * {@link ScenarioContextPiece} that was found rather than just its
      * value - call {@link ScenarioContextPiece#replace} on it to swap the
      * value out for a new one, in place.
-     *
-     * @throws Error
-     *  if more qualifiers are given than `type` takes, or if no piece
-     *  matches `qualifiers`.
      */
     findPiece<Value>(type: Constructor<Value>, ...qualifiers: string[]): ScenarioContextPiece<Value> {
         return this.scenarioContext.partFor(type).findPiece(...qualifiers);

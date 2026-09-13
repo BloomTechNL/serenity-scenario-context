@@ -56,11 +56,6 @@ describe('UseScenarioContext', () => {
             expect(ability.find(Fruit, 'crunchy')).toBe(apple);
         });
 
-        // The exhaustive behaviour of searching - the exact-match vs
-        // most-recently-used tiers, the spotlight effect - is covered in
-        // ScenarioContextPart's own unit tests. These tests just confirm the
-        // ability wires everything up correctly.
-
         it('insists on exactly one match when exactly as many qualifiers as the type takes are given', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = ability.add(new Fruit('apple'), 'crunchy').value;

@@ -9,14 +9,9 @@ import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
  * Holds every {@link ScenarioContextPiece} of one particular type recorded
- * in a {@link ScenarioContext}, as an ordered stack: the piece put on top
- * most recently is what {@link #findPiece} prefers when several pieces
- * match.
- *
- * Also enforces the two invariants {@link ScenarioContext} establishes per
- * type: every piece carries the same, fixed number of qualifiers -
- * whatever the first one added carried - and no two pieces carry the exact
- * same combination of them.
+ * in a {@link ScenarioContext}. Every piece must carry the same, fixed
+ * number of qualifiers, and no two pieces may carry the exact same
+ * combination of them.
  */
 export class ScenarioContextPart<Value = unknown> {
 
@@ -76,20 +71,13 @@ export class ScenarioContextPart<Value = unknown> {
 
     /**
      * Finds the piece qualified by every one of `qualifiers`, and puts it
-     * on top of this part - "in the spotlight".
-     *
-     * Given exactly as many qualifiers as this part's type takes, at most
-     * one piece can match - the combination is a composite key - so the
-     * result is unambiguous by construction. Given fewer, whichever
-     * matching piece is currently in the spotlight is returned, no
-     * questions asked. Given more, `qualifiers` couldn't possibly match
-     * anything.
+     * on top of this part - "in the spotlight". Given exactly as many
+     * qualifiers as this type takes, the match is unambiguous; given
+     * fewer, whichever match is currently in the spotlight is returned.
      *
      * Reach for this over {@link ScenarioContextPart#find} only when you
      * intend to {@link ScenarioContextPiece#replace} the value once you've
      * read it.
-     *
-     * @returns the {@link ScenarioContextPiece} that was found.
      *
      * @throws TooManyQualifiersError
      *  if more qualifiers are given than this type takes.

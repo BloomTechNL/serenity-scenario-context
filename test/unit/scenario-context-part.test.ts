@@ -7,9 +7,6 @@ import {
     UnexpectedQualifierCountError,
 } from '../../src';
 
-// Two unrelated fixture types, used to prove that the fixed-qualifier-count
-// and uniqueness constraints - and the recency order - are a part's own
-// concern, tracked separately per type.
 class Fruit {
     constructor(public readonly name: string) {
     }
@@ -32,8 +29,6 @@ describe('ScenarioContextPart', () => {
             part.add(pieceOf(first, 'fuji'));
             part.add(pieceOf(second, 'cavendish'));
 
-            // fewer qualifiers than the fixed count (1) falls back to
-            // "whichever is most recently used" - proving `second` is on top.
             expect(part.find()).toBe(second);
         });
     });
@@ -100,7 +95,6 @@ describe('ScenarioContextPart', () => {
 
         it('behaves like an exact-match search when exactly the fixed number of qualifiers for the type is given', () => {
             const part = new ScenarioContextPart(Fruit);
-            // the first Fruit added fixes the count at 2 qualifiers.
             const fuji = new Fruit('fuji apple');
             part.add(pieceOf(fuji, 'red', 'crunchy'));
             part.add(pieceOf(new Fruit('cavendish banana'), 'yellow', 'soft'));
@@ -122,10 +116,6 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             const apple = new Fruit('apple');
             part.add(pieceOf(apple, 'red', 'crunchy'));
-            // a second Fruit qualified by 'red' too, but not the exact same
-            // combination - the uniqueness invariant means no piece other
-            // than "apple" can ever match a 2-qualifier query of 'red'
-            // plus anything else "apple" is qualified by.
             part.add(pieceOf(new Fruit('cherry'), 'red', 'shiny'));
 
             expect(part.findPiece('red', 'crunchy').value).toBe(apple);
@@ -144,7 +134,7 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             const redApple = new Fruit('red delicious');
             part.add(pieceOf(redApple, 'red', 'crunchy'));
-            part.add(pieceOf(new Fruit('cavendish banana'), 'yellow', 'soft'));  // on top, but not red
+            part.add(pieceOf(new Fruit('cavendish banana'), 'yellow', 'soft'));
 
             expect(part.findPiece('red').value).toBe(redApple);
         });
@@ -173,19 +163,17 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             const apple = new Fruit('apple');
             part.add(pieceOf(apple, 'crunchy'));
-            part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
+            part.add(pieceOf(new Fruit('banana'), 'soft'));
 
             part.findPiece('crunchy');
 
-            // fewer qualifiers than the fixed count (1) falls back to
-            // "whichever is most recently used" - proving `apple` is now on top.
             expect(part.findPiece().value).toBe(apple);
         });
 
         it('lets the found value be replaced, in place, via replace', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'crunchy'));
-            part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
+            part.add(pieceOf(new Fruit('banana'), 'soft'));
 
             const found = part.findPiece('crunchy');
             const greenApple = new Fruit('green apple');
@@ -231,7 +219,7 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             const apple = new Fruit('apple');
             part.add(pieceOf(apple, 'crunchy'));
-            part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
+            part.add(pieceOf(new Fruit('banana'), 'soft'));
 
             part.find('crunchy');
 

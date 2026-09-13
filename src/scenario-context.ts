@@ -4,12 +4,7 @@ import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
  * Holds the {@link ScenarioContextPiece} objects recorded during a scenario,
- * partitioned by type into one {@link ScenarioContextPart} per type - see
- * {@link ScenarioContext#partFor} - so that a search never needs to sift
- * through pieces of any other type. Everything else - ordering ("put on
- * top"), the fixed qualifier count established per type, and searching -
- * is each {@link ScenarioContextPart}'s own concern; this class is just the
- * registry that routes to the right one.
+ * partitioned by type into one {@link ScenarioContextPart} per type.
  */
 export class ScenarioContext {
 
