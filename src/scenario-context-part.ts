@@ -1,5 +1,4 @@
 import { Constructor } from './constructor';
-import { ScenarioContextHandle } from './scenario-context-handle';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
@@ -21,6 +20,11 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  * ```ts
  * UseScenarioContext.as(actor).find(Ticket, 'urgent');
  * ```
+ *
+ * Swapping out what a found piece holds is
+ * {@link ScenarioContextPiece#replace}'s job, not this class's: a piece
+ * never changes its qualifiers or its position in here, so replacing its
+ * value doesn't need any help from the part that holds it.
  */
 export class ScenarioContextPart<Value = unknown> implements Iterable<ScenarioContextPiece<Value>> {
 
@@ -48,185 +52,6 @@ export class ScenarioContextPart<Value = unknown> implements Iterable<ScenarioCo
      *  carries the exact same combination of qualifiers.
      */
     add(piece: ScenarioContextPiece<Value>): void {
-        this.assertSatisfiesTypeConstraints(piece);
-
-        this.pieces.unshift(piece);
-    }
-
-    /**
-     * Moves `piece`, already held by this part, back to the top.
-     *
-     * @throws Error if `piece` is not (or is no longer) held by this part.
-     */
-    putOnTop(piece: ScenarioContextPiece<Value>): void {
-        const index = this.indexOf(piece, 'Could not put the context piece on top because it is not part of this scenario context');
-
-        this.pieces.splice(index, 1);
-        this.pieces.unshift(piece);
-    }
-
-    /**
-     * Swaps `oldPiece`, already held by this part, for `newPiece`, in place,
-     * so that - unlike `add` or `putOnTop` - `newPiece` doesn't get put in
-     * the spotlight by virtue of being replaced.
-     *
-     * @throws Error
-     *  if `oldPiece` is not (or is no longer) held by this part; if
-     *  `newPiece`'s number of qualifiers doesn't match the number already
-     *  established for this type; or if some *other* piece held by this
-     *  part already carries the exact same combination of qualifiers that
-     *  `newPiece` does.
-     */
-    replace(oldPiece: ScenarioContextPiece<Value>, newPiece: ScenarioContextPiece<Value>): void {
-        const index = this.indexOf(oldPiece, 'Could not replace the context piece because it is not part of this scenario context');
-
-        this.assertSatisfiesTypeConstraints(newPiece, oldPiece);
-
-        this.pieces[index] = newPiece;
-    }
-
-    /**
-     * Finds the single piece qualified by every one of `qualifiers`, and
-     * puts it "in the spotlight" - on top of this part.
-     *
-     * Use this method when you expect at most one matching piece to exist,
-     * and want to be told if that assumption doesn't hold.
-     *
-     * @returns a {@link ScenarioContextHandle} wrapping the value that was
-     *  found - call {@link ScenarioContextHandle#getValue} to get at the
-     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
-     *  it out for a new one.
-     *
-     * @throws Error
-     *  if no piece matches, or if more than one does. When several pieces
-     *  match and picking whichever was used most recently is an acceptable
-     *  way to resolve that ambiguity, use
-     *  {@link ScenarioContextPart#findLastUsed} instead.
-     */
-    findOne(...qualifiers: string[]): ScenarioContextHandle<Value> {
-        const matches = this.matching(qualifiers);
-
-        if (matches.length === 0) {
-            throw new Error(`Could not find ${ this.description(qualifiers) }`);
-        }
-
-        if (matches.length > 1) {
-            throw new Error(
-                `Found ${ matches.length } instances of ${ this.description(qualifiers) }, expected exactly one. `
-                + 'Use findLastUsed() instead if the most recently used one will do.'
-            );
-        }
-
-        return this.spotlight(matches[0]);
-    }
-
-    /**
-     * Finds whichever piece qualified by every one of `qualifiers` was put
-     * on top of this part most recently, and puts it back "in the
-     * spotlight". Unlike {@link ScenarioContextPart#findOne}, this method
-     * doesn't complain when several pieces match.
-     *
-     * @returns a {@link ScenarioContextHandle} wrapping the value that was
-     *  found - call {@link ScenarioContextHandle#getValue} to get at the
-     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
-     *  it out for a new one.
-     *
-     * @throws Error if no piece matches `qualifiers`.
-     */
-    findLastUsed(...qualifiers: string[]): ScenarioContextHandle<Value> {
-        const matches = this.matching(qualifiers);
-
-        if (matches.length === 0) {
-            throw new Error(`Could not find ${ this.description(qualifiers) }`);
-        }
-
-        return this.spotlight(matches[0]);
-    }
-
-    /**
-     * A shorthand that decides between {@link ScenarioContextPart#findOne}
-     * and {@link ScenarioContextPart#findLastUsed} for you, based on how
-     * `qualifiers` compares to the fixed number of qualifiers established
-     * for this part's type:
-     *
-     * - given exactly that many qualifiers, there can be at most one piece
-     *   qualified exactly like that - the combination is a composite key -
-     *   so this behaves like `findOne()`: either the single match, or an
-     *   error;
-     * - given fewer, several pieces might still match, so this behaves like
-     *   `findLastUsed()` instead: whichever matching piece is currently in
-     *   the spotlight, no questions asked;
-     * - given more, `qualifiers` couldn't possibly match anything, and this
-     *   throws rather than searching for something that can't exist.
-     *
-     * This is exactly the `label ? findOne(label) : findLastUsed()` idiom
-     * that comes up whenever a qualifier is something a caller may or may
-     * not have on hand - e.g. resolving "the ticket labelled `label`" when
-     * `label` was given, or "the ticket in the spotlight" when it wasn't -
-     * generalized to however many qualifiers the type actually takes.
-     *
-     * ```ts
-     * // label?: string
-     * UseScenarioContext.as(actor).find(Ticket, ...(label ? [ label ] : []));
-     * ```
-     *
-     * @returns a {@link ScenarioContextHandle} wrapping the value that was
-     *  found - call {@link ScenarioContextHandle#getValue} to get at the
-     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
-     *  it out for a new one.
-     *
-     * @throws Error
-     *  if more qualifiers are given than this type takes; otherwise under
-     *  the same conditions as whichever of `findOne`/`findLastUsed` this
-     *  delegates to.
-     */
-    find(...qualifiers: string[]): ScenarioContextHandle<Value> {
-        if (this.qualifierCount !== undefined && qualifiers.length > this.qualifierCount) {
-            throw new Error(
-                `${ this.type.name } takes ${ this.qualifierCount } qualifier(s), but ${ qualifiers.length } `
-                + `${ qualifiers.length === 1 ? 'was' : 'were' } given to find()`
-            );
-        }
-
-        return this.qualifierCount !== undefined && qualifiers.length === this.qualifierCount
-            ? this.findOne(...qualifiers)
-            : this.findLastUsed(...qualifiers);
-    }
-
-    /**
-     * Iterates over this part's pieces, top (most recently put) to bottom.
-     */
-    [Symbol.iterator](): Iterator<ScenarioContextPiece<Value>> {
-        return this.pieces[Symbol.iterator]();
-    }
-
-    private spotlight(piece: ScenarioContextPiece<Value>): ScenarioContextHandle<Value> {
-        this.putOnTop(piece);
-
-        return new ScenarioContextHandle(this, piece);
-    }
-
-    private matching(qualifiers: string[]): Array<ScenarioContextPiece<Value>> {
-        return this.pieces.filter(piece => piece.hasQualifiers(qualifiers));
-    }
-
-    private indexOf(piece: ScenarioContextPiece<Value>, errorMessage: string): number {
-        const index = this.pieces.indexOf(piece);
-
-        if (index === -1) {
-            throw new Error(errorMessage);
-        }
-
-        return index;
-    }
-
-    private description(qualifiers: string[]): string {
-        return qualifiers.length > 0
-            ? `${ this.type.name } qualified by ${ qualifiers.join(', ') } in the scenario context`
-            : `${ this.type.name } in the scenario context`;
-    }
-
-    private assertSatisfiesTypeConstraints(piece: ScenarioContextPiece<Value>, ignore?: ScenarioContextPiece<Value>): void {
         const qualifierCount = piece.allQualifiers().size;
 
         if (this.qualifierCount === undefined) {
@@ -239,10 +64,7 @@ export class ScenarioContextPart<Value = unknown> implements Iterable<ScenarioCo
             );
         }
 
-        const duplicate = this.pieces.some(existing =>
-            existing !== ignore
-            && haveTheSameQualifiers(existing, piece),
-        );
+        const duplicate = this.pieces.some(existing => haveTheSameQualifiers(existing, piece));
 
         if (duplicate) {
             throw new Error(
@@ -250,6 +72,90 @@ export class ScenarioContextPart<Value = unknown> implements Iterable<ScenarioCo
                 + 'qualified exactly like that is already part of the scenario context'
             );
         }
+
+        this.pieces.unshift(piece);
+    }
+
+    /**
+     * Finds the piece qualified by every one of `qualifiers`, and puts it
+     * "in the spotlight" - on top of this part - so that whatever you
+     * search for next, without being overly specific, tends to find what
+     * you were just working with.
+     *
+     * Given exactly as many qualifiers as this part's type takes, at most
+     * one piece can possibly match - the combination is a composite key,
+     * and {@link ScenarioContextPart#add} never lets two pieces share one -
+     * so the result is unambiguous by construction. Given fewer, several
+     * pieces might still match, so whichever one was put on top of this
+     * part most recently is returned, no questions asked. Given more than
+     * this type takes, `qualifiers` couldn't possibly match anything, and
+     * this throws rather than searching for something that can't exist.
+     *
+     * This is exactly the `label ? "the one labelled label" : "whichever is
+     * in the spotlight"` idiom that comes up whenever a qualifier is
+     * something a caller may or may not have on hand - e.g. resolving "the
+     * ticket labelled `label`" when `label` was given, or "the ticket in
+     * the spotlight" when it wasn't:
+     *
+     * ```ts
+     * // label?: string
+     * UseScenarioContext.as(actor).find(Ticket, ...(label ? [ label ] : []));
+     * ```
+     *
+     * @returns the {@link ScenarioContextPiece} that was found - read
+     *  {@link ScenarioContextPiece#value} to get at the value itself, or
+     *  call {@link ScenarioContextPiece#replace} to swap it out for a new
+     *  one.
+     *
+     * @throws Error
+     *  if more qualifiers are given than this type takes, or if no piece
+     *  matches `qualifiers`.
+     */
+    find(...qualifiers: string[]): ScenarioContextPiece<Value> {
+        if (this.qualifierCount !== undefined && qualifiers.length > this.qualifierCount) {
+            throw new Error(
+                `${ this.type.name } takes ${ this.qualifierCount } qualifier(s), but ${ qualifiers.length } `
+                + `${ qualifiers.length === 1 ? 'was' : 'were' } given to find()`
+            );
+        }
+
+        const matches = this.matching(qualifiers);
+
+        if (matches.length === 0) {
+            throw new Error(`Could not find ${ this.description(qualifiers) }`);
+        }
+
+        const piece = matches[0];
+        this.putOnTop(piece);
+
+        return piece;
+    }
+
+    /**
+     * Iterates over this part's pieces, top (most recently put) to bottom.
+     */
+    [Symbol.iterator](): Iterator<ScenarioContextPiece<Value>> {
+        return this.pieces[Symbol.iterator]();
+    }
+
+    /**
+     * Moves `piece`, already held by this part, back to the top - "in the
+     * spotlight". Only ever called with a piece this part just found for
+     * itself (see `find`/`matching`), so it's always already here.
+     */
+    private putOnTop(piece: ScenarioContextPiece<Value>): void {
+        this.pieces.splice(this.pieces.indexOf(piece), 1);
+        this.pieces.unshift(piece);
+    }
+
+    private matching(qualifiers: string[]): Array<ScenarioContextPiece<Value>> {
+        return this.pieces.filter(piece => piece.hasQualifiers(qualifiers));
+    }
+
+    private description(qualifiers: string[]): string {
+        return qualifiers.length > 0
+            ? `${ this.type.name } qualified by ${ qualifiers.join(', ') } in the scenario context`
+            : `${ this.type.name } in the scenario context`;
     }
 }
 

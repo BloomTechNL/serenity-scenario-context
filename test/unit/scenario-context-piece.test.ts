@@ -10,6 +10,35 @@ describe('ScenarioContextPiece', () => {
         expect(piece.value).toBe(value);
     });
 
+    describe('replace', () => {
+
+        it('swaps out the value returned by a later call to value', () => {
+            const piece = new ScenarioContextPiece({ name: 'original' });
+            const replacement = { name: 'replacement' };
+
+            piece.replace(replacement);
+
+            expect(piece.value).toBe(replacement);
+        });
+
+        it('leaves the qualifiers unaffected', () => {
+            const piece = new ScenarioContextPiece('original', [ 'a', 'b' ]);
+
+            piece.replace('replacement');
+
+            expect(piece.allQualifiers()).toEqual(new Set([ 'a', 'b' ]));
+        });
+
+        it('can be called more than once', () => {
+            const piece = new ScenarioContextPiece('original');
+
+            piece.replace('first replacement');
+            piece.replace('second replacement');
+
+            expect(piece.value).toBe('second replacement');
+        });
+    });
+
     describe('hasQualifiers', () => {
 
         it('returns true when no qualifiers are requested, regardless of the ones the piece has', () => {

@@ -8,7 +8,7 @@ import { UseSupportDeskApi } from '../use-support-desk-api';
 export function numberOfTicketsFound(options: { searchTerm: Answerable<string> }) {
     return Question.about('number of tickets found', async actor => {
         const searchTerm = await actor.answer(options.searchTerm);
-        const testId = UseScenarioContext.as(actor).find(TestIdentificationContext).getValue().id;
+        const testId = UseScenarioContext.as(actor).find(TestIdentificationContext).value.id;
 
         const query = new URLSearchParams({ subject: searchTerm, testId });
 

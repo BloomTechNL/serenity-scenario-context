@@ -8,9 +8,8 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  * {@link ScenarioContext#partFor} - so that a search never needs to sift
  * through pieces of any other type. Everything else - ordering ("put on
  * top", iterating top to bottom), the fixed qualifier count established per
- * type, searching, and swapping a piece's value via `replace` - is each
- * {@link ScenarioContextPart}'s own concern; this class is just the registry
- * that routes to the right one.
+ * type, and searching - is each {@link ScenarioContextPart}'s own concern;
+ * this class is just the registry that routes to the right one.
  */
 export class ScenarioContext {
 

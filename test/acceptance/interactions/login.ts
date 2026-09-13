@@ -9,7 +9,7 @@ export const login = () =>
     Interaction.where('#actor logs in', actor => {
         const credentials = UseScenarioContext.as(actor)
             .find(LoginCredentialContext, actorInTheSpotlight().name)
-            .getValue();
+            .value;
 
         const session = UseSupportDeskApi.as(actor).post<SessionRepresentation>('/login', {
             username: credentials.username,

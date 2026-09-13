@@ -2,7 +2,6 @@ import { Ability } from '@serenity-js/core';
 
 import { Constructor } from './constructor';
 import { ScenarioContext } from './scenario-context';
-import { ScenarioContextHandle } from './scenario-context-handle';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
@@ -37,8 +36,8 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  * ```ts
  * const ticket = UseScenarioContext.as(actor).find(Ticket, 'urgent');
  *
- * ticket.getValue();               // the Ticket itself
- * ticket.replaceValue(newTicket);  // swaps it out for newTicket, in place
+ * ticket.value;              // the Ticket itself
+ * ticket.replace(newTicket); // swaps it out for newTicket, in place
  * ```
  *
  * Finding a piece of context puts it "in the spotlight" - i.e. on top of
@@ -80,23 +79,22 @@ export class UseScenarioContext extends Ability {
     /**
      * Finds the piece of `type`, qualified by every one of `qualifiers`, the
      * way {@link ScenarioContextPart#find} describes: given exactly as many
-     * qualifiers as `type` takes, there can be at most one match, so this
-     * insists on exactly one; given fewer, whichever match was put on top
-     * of the scenario context most recently is returned, no questions
-     * asked; given more than `type` takes, this throws rather than
-     * searching for something that can't exist.
+     * qualifiers as `type` takes, there can be at most one match - unambiguous
+     * by construction; given fewer, whichever match was put on top of the
+     * scenario context most recently is returned, no questions asked; given
+     * more than `type` takes, this throws rather than searching for
+     * something that can't exist.
      *
-     * @returns a {@link ScenarioContextHandle} wrapping the value that was
-     *  found - call {@link ScenarioContextHandle#getValue} to get at the
-     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
-     *  it out for a new one.
+     * @returns the {@link ScenarioContextPiece} that was found - read
+     *  {@link ScenarioContextPiece#value} to get at the value itself, or
+     *  call {@link ScenarioContextPiece#replace} to swap it out for a new
+     *  one.
      *
      * @throws Error
-     *  if more qualifiers are given than `type` takes; if no piece matches;
-     *  or if several do and exactly as many qualifiers as `type` takes were
-     *  given.
+     *  if more qualifiers are given than `type` takes, or if no piece
+     *  matches `qualifiers`.
      */
-    find<Value>(type: Constructor<Value>, ...qualifiers: string[]): ScenarioContextHandle<Value> {
+    find<Value>(type: Constructor<Value>, ...qualifiers: string[]): ScenarioContextPiece<Value> {
         return this.scenarioContext.partFor(type).find(...qualifiers);
     }
 }

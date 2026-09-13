@@ -6,20 +6,50 @@
  * to tell apart several pieces holding objects of the same type, e.g. several
  * `Ticket` instances qualified by their id, or by their priority.
  *
- * `ScenarioContextPiece` instances are immutable: once created, neither the
- * `value` nor its qualifiers can be swapped out. To change the qualifiers
- * associated with a domain object, create a new piece and put it on top of
- * the {@link ScenarioContext} instead.
+ * A piece's qualifiers, once set, never change - they're what a
+ * {@link ScenarioContextPart} uses to tell same-typed pieces apart, so
+ * swapping them out from under it would be unsound. Its `value` can be
+ * swapped out, though, via {@link ScenarioContextPiece#replace} - which
+ * updates what a piece holds without disturbing its identity, its
+ * qualifiers, or its position in the {@link ScenarioContextPart} that holds
+ * it. This is what {@link ScenarioContextPart#find} returns, and is meant
+ * to be updated in place once you've found it:
+ *
+ * ```ts
+ * const ticket = UseScenarioContext.as(actor).find(Ticket);
+ *
+ * ticket.replace(ticket.value.resolve());
+ *
+ * // subsequent searches, and this piece, now see the resolved ticket:
+ * ticket.value.status; // 'resolved'
+ * ```
  */
 export class ScenarioContextPiece<Value = unknown> {
 
     private readonly qualifiers: ReadonlySet<string>;
+    private currentValue: Value;
 
     constructor(
-        public readonly value: Value,
+        value: Value,
         qualifiers: Iterable<string> = [],
     ) {
+        this.currentValue = value;
         this.qualifiers = new Set(qualifiers);
+    }
+
+    /**
+     * @returns the value currently held by this piece.
+     */
+    get value(): Value {
+        return this.currentValue;
+    }
+
+    /**
+     * Swaps out the value held by this piece for `newValue`, keeping its
+     * qualifiers - and its position wherever it's held - unaffected.
+     */
+    replace(newValue: Value): void {
+        this.currentValue = newValue;
     }
 
     /**

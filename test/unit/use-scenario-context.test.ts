@@ -12,7 +12,7 @@ describe('UseScenarioContext', () => {
 
         ability.add(new Fruit('apple'));
 
-        expect(ability.find(Fruit).getValue()).toBeInstanceOf(Fruit);
+        expect(ability.find(Fruit).value).toBeInstanceOf(Fruit);
     });
 
     describe('add', () => {
@@ -23,7 +23,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple);
 
-            expect(ability.find(Fruit).getValue()).toBe(apple);
+            expect(ability.find(Fruit).value).toBe(apple);
         });
 
         it('makes the value findable by its type and qualifiers', () => {
@@ -32,7 +32,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple, 'crunchy', 'red');
 
-            expect(ability.find(Fruit, 'red').getValue()).toBe(apple);
+            expect(ability.find(Fruit, 'red').value).toBe(apple);
         });
 
         it('returns the context piece that was created, for convenience', () => {
@@ -53,11 +53,11 @@ describe('UseScenarioContext', () => {
             const ability = UseScenarioContext.using(context);
             const apple = context.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.find(Fruit, 'crunchy').getValue()).toBe(apple);
+            expect(ability.find(Fruit, 'crunchy').value).toBe(apple);
         });
 
-        // The exhaustive behaviour of searching - findOne()-like vs
-        // findLastUsed()-like, the spotlight effect - is covered in
+        // The exhaustive behaviour of searching - the exact-match vs
+        // most-recently-used tiers, the spotlight effect - is covered in
         // ScenarioContextPart's own unit tests. These tests just confirm the
         // ability wires everything up correctly.
 
@@ -65,7 +65,7 @@ describe('UseScenarioContext', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = ability.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.find(Fruit, 'crunchy').getValue()).toBe(apple);
+            expect(ability.find(Fruit, 'crunchy').value).toBe(apple);
         });
 
         it('falls back to the most recently used match when fewer qualifiers than the type takes are given', () => {
@@ -73,7 +73,7 @@ describe('UseScenarioContext', () => {
             ability.add(new Fruit('apple'), 'gala');
             const banana = ability.add(new Fruit('banana'), 'cavendish').value;
 
-            expect(ability.find(Fruit).getValue()).toBe(banana);
+            expect(ability.find(Fruit).value).toBe(banana);
         });
     });
 });

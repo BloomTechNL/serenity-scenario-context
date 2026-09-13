@@ -13,14 +13,14 @@ export const changeTicketSubject = (newSubject: string, label?: string) =>
             : `#actor changes the subject of the ticket in the spotlight to "${ newSubject }"`,
         actor => {
             const qualifiers = label ? [ label ] : [];
-            const handle = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers);
+            const piece = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers);
 
-            const ticketContext = handle.getValue();
+            const ticketContext = piece.value;
 
             UseSupportDeskApi.as(actor).post<TicketRepresentation>(
                 `/tickets/${ ticketContext.id }/subject`, { subject: newSubject }, 200,
             );
 
-            handle.replaceValue(ticketContext.changeSubject(newSubject));
+            piece.replace(ticketContext.changeSubject(newSubject));
         },
     );
