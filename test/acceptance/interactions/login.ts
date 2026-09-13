@@ -1,4 +1,4 @@
-import { actorInTheSpotlight, Interaction } from '@serenity-js/core';
+import { Actor, Interaction } from '@serenity-js/core';
 
 import { UseScenarioContext } from '../../../src/index';
 import { LoginCredentialContext } from './login-credential-context';
@@ -8,7 +8,7 @@ import { UseSupportDeskApi } from '../use-support-desk-api';
 export const login = () =>
     Interaction.where('#actor logs in', actor => {
         const credentials = UseScenarioContext.as(actor)
-            .find(LoginCredentialContext, { actor: actorInTheSpotlight().name });
+            .find(LoginCredentialContext, { actor: (actor as Actor).name });
 
         const session = UseSupportDeskApi.as(actor).post<SessionRepresentation>('/login', {
             username: credentials.username,

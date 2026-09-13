@@ -1,4 +1,4 @@
-import { actorInTheSpotlight, Interaction } from '@serenity-js/core';
+import { Actor, Interaction } from '@serenity-js/core';
 
 import { UseScenarioContext } from '../../../src/index';
 import { LoginCredentialContext } from './login-credential-context';
@@ -14,5 +14,5 @@ export const register = () =>
             password: credentials.password,
         });
 
-        UseScenarioContext.as(actor).add(credentials, { actor: actorInTheSpotlight().name });
+        UseScenarioContext.as(actor).add(credentials, { actor: (actor as Actor).name });
     });
