@@ -67,6 +67,6 @@ export class ScenarioContextPiece<Value = unknown> {
      *  of qualifiers as this piece - neither more, nor fewer.
      */
     hasSameQualifiersAs(other: ScenarioContextPiece): boolean {
-        return this.qualifiers.size === other.allQualifiers().size && this.hasQualifiers(other.allQualifiers());
+        return this.qualifierCount() === other.qualifierCount() && this.hasQualifiers(other.allQualifiers());
     }
 }
