@@ -73,4 +73,12 @@ export class ScenarioContextPiece<Value = unknown> {
     allQualifiers(): ReadonlySet<string> {
         return this.qualifiers;
     }
+
+    /**
+     * @returns `true` if `other` is qualified by the exact same combination
+     *  of qualifiers as this piece - neither more, nor fewer.
+     */
+    hasSameQualifiersAs(other: ScenarioContextPiece): boolean {
+        return this.qualifiers.size === other.allQualifiers().size && this.hasQualifiers(other.allQualifiers());
+    }
 }

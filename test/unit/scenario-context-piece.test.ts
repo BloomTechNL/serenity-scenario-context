@@ -72,6 +72,44 @@ describe('ScenarioContextPiece', () => {
         });
     });
 
+    describe('hasSameQualifiersAs', () => {
+
+        it('returns true when both pieces carry the exact same combination of qualifiers', () => {
+            const piece = new ScenarioContextPiece('a value', [ 'a', 'b' ]);
+            const other = new ScenarioContextPiece('another value', [ 'b', 'a' ]);
+
+            expect(piece.hasSameQualifiersAs(other)).toBe(true);
+        });
+
+        it('returns true when neither piece has any qualifiers', () => {
+            const piece = new ScenarioContextPiece('a value');
+            const other = new ScenarioContextPiece('another value');
+
+            expect(piece.hasSameQualifiersAs(other)).toBe(true);
+        });
+
+        it('returns false when the other piece has additional qualifiers', () => {
+            const piece = new ScenarioContextPiece('a value', [ 'a' ]);
+            const other = new ScenarioContextPiece('another value', [ 'a', 'b' ]);
+
+            expect(piece.hasSameQualifiersAs(other)).toBe(false);
+        });
+
+        it('returns false when the other piece is missing some of this piece\'s qualifiers', () => {
+            const piece = new ScenarioContextPiece('a value', [ 'a', 'b' ]);
+            const other = new ScenarioContextPiece('another value', [ 'a' ]);
+
+            expect(piece.hasSameQualifiersAs(other)).toBe(false);
+        });
+
+        it('returns false when the qualifiers differ even though the count matches', () => {
+            const piece = new ScenarioContextPiece('a value', [ 'a', 'b' ]);
+            const other = new ScenarioContextPiece('another value', [ 'a', 'c' ]);
+
+            expect(piece.hasSameQualifiersAs(other)).toBe(false);
+        });
+    });
+
     describe('allQualifiers', () => {
 
         it('returns the qualifiers the piece was created with', () => {

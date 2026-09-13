@@ -66,8 +66,8 @@ rather than by a key invented purely for storage.
   This is what `find` (below) returns.
 - [`ScenarioContextPart`](src/scenario-context-part.ts) - holds every piece
   of *one particular type*, as an ordered stack of its own: the piece that
-  was put on top most recently is iterated over first. It's also where the
-  two invariants that type is held to live:
+  was put on top most recently is what a search prefers when several match.
+  It's also where the two invariants that type is held to live:
   - every piece of that type is qualified by the same, fixed *number* of
     qualifiers - however many the first piece of that type was added with;
   - no two pieces of that type carry the exact same *combination* of
@@ -114,6 +114,11 @@ rather than by a key invented purely for storage.
   like, and `find(Type, ...qualifiers)` to search for one again - it just
   looks up the `ScenarioContextPart` for `Type` and calls `find` on it, so
   there's no separate step to get at the part yourself.
+- [`scenario-context-errors.ts`](src/scenario-context-errors.ts) - a named
+  `Error` subclass for each way `add`/`find` can fail
+  (`UnexpectedQualifierCountError`, `DuplicateQualifiersError`,
+  `TooManyQualifiersError`, `PieceNotFoundError`), so a caller that cares can
+  tell them apart with `instanceof` instead of matching on message text.
 
 ## Usage
 

@@ -1,4 +1,11 @@
-import { ScenarioContextPart, ScenarioContextPiece } from '../../src';
+import {
+    DuplicateQualifiersError,
+    PieceNotFoundError,
+    ScenarioContextPart,
+    ScenarioContextPiece,
+    TooManyQualifiersError,
+    UnexpectedQualifierCountError,
+} from '../../src';
 
 // Two unrelated fixture types, used to prove that the fixed-qualifier-count
 // and uniqueness constraints - and the recency order - are a part's own
@@ -19,46 +26,15 @@ describe('ScenarioContextPart', () => {
 
         it('places a new piece on top of the part', () => {
             const part = new ScenarioContextPart(Fruit);
-            const first  = pieceOf(new Fruit('apple'), 'fuji');
-            const second = pieceOf(new Fruit('banana'), 'cavendish');
+            const first = new Fruit('apple');
+            const second = new Fruit('banana');
 
-            part.add(first);
-            part.add(second);
+            part.add(pieceOf(first, 'fuji'));
+            part.add(pieceOf(second, 'cavendish'));
 
-            expect(Array.from(part)).toEqual([ second, first ]);
-        });
-    });
-
-    describe('iterating', () => {
-
-        it('yields the pieces from top (most recently put) to bottom (least recently put)', () => {
-            const part = new ScenarioContextPart(Fruit);
-            const first  = pieceOf(new Fruit('apple'), 'fuji');
-            const second = pieceOf(new Fruit('banana'), 'cavendish');
-            const third  = pieceOf(new Fruit('cherry'), 'rainier');
-
-            part.add(first);
-            part.add(second);
-            part.add(third);
-
-            expect(Array.from(part)).toEqual([ third, second, first ]);
-        });
-
-        it('can be iterated over more than once, and with a for-of loop', () => {
-            const part = new ScenarioContextPart(Fruit);
-            const first  = pieceOf(new Fruit('apple'), 'fuji');
-            const second = pieceOf(new Fruit('banana'), 'cavendish');
-
-            part.add(first);
-            part.add(second);
-
-            const collected: ScenarioContextPiece<Fruit>[] = [];
-            for (const piece of part) {
-                collected.push(piece);
-            }
-
-            expect(collected).toEqual([ second, first ]);
-            expect(Array.from(part)).toEqual([ second, first ]);
+            // fewer qualifiers than the fixed count (1) falls back to
+            // "whichever is most recently used" - proving `second` is on top.
+            expect(part.find().value).toBe(second);
         });
     });
 
@@ -82,6 +58,7 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'red'));
 
+            expect(() => part.add(pieceOf(new Fruit('banana'), 'yellow', 'soft'))).toThrow(UnexpectedQualifierCountError);
             expect(() => part.add(pieceOf(new Fruit('banana'), 'yellow', 'soft'))).toThrow(
                 'Could not add Fruit qualified by 2 qualifier(s) - every Fruit in the scenario context must be '
                 + 'qualified by exactly 1 qualifier(s), as established when the first one was added'
@@ -92,6 +69,7 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('apple'), 'red', 'crunchy'));
 
+            expect(() => part.add(pieceOf(new Fruit('cherry'), 'crunchy', 'red'))).toThrow(DuplicateQualifiersError);
             expect(() => part.add(pieceOf(new Fruit('cherry'), 'crunchy', 'red'))).toThrow(
                 'Could not add Fruit qualified by crunchy, red - a Fruit qualified exactly like that is already '
                 + 'part of the scenario context'
@@ -100,12 +78,13 @@ describe('ScenarioContextPart', () => {
 
         it('allows several pieces as long as their combination of qualifiers differs', () => {
             const part = new ScenarioContextPart(Fruit);
-            const apple = pieceOf(new Fruit('apple'), 'red');
-            const banana = pieceOf(new Fruit('banana'), 'yellow');
-            part.add(apple);
-            part.add(banana);
+            const apple = new Fruit('apple');
+            const banana = new Fruit('banana');
+            part.add(pieceOf(apple, 'red'));
+            part.add(pieceOf(banana, 'yellow'));
 
-            expect(Array.from(part)).toEqual([ banana, apple ]);
+            expect(part.find('red').value).toBe(apple);
+            expect(part.find('yellow').value).toBe(banana);
         });
     });
 
@@ -133,6 +112,7 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('fuji apple'), 'red', 'crunchy'));
 
+            expect(() => part.find('yellow', 'soft')).toThrow(PieceNotFoundError);
             expect(() => part.find('yellow', 'soft')).toThrow(
                 'Could not find Fruit qualified by yellow, soft in the scenario context'
             );
@@ -173,6 +153,7 @@ describe('ScenarioContextPart', () => {
             const part = new ScenarioContextPart(Fruit);
             part.add(pieceOf(new Fruit('fuji apple'), 'red', 'crunchy'));
 
+            expect(() => part.find('red', 'crunchy', 'extra')).toThrow(TooManyQualifiersError);
             expect(() => part.find('red', 'crunchy', 'extra')).toThrow(
                 'Fruit takes 2 qualifier(s), but 3 were given to find()'
             );
@@ -181,6 +162,7 @@ describe('ScenarioContextPart', () => {
         it('throws when nothing has been added yet', () => {
             const part = new ScenarioContextPart(Fruit);
 
+            expect(() => part.find('red')).toThrow(PieceNotFoundError);
             expect(() => part.find('red')).toThrow(
                 'Could not find Fruit qualified by red in the scenario context'
             );
@@ -189,13 +171,15 @@ describe('ScenarioContextPart', () => {
 
         it('puts the found value in the spotlight, on top of the part', () => {
             const part = new ScenarioContextPart(Fruit);
-            const apple = pieceOf(new Fruit('apple'), 'crunchy');
-            part.add(apple);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple, 'crunchy'));
             part.add(pieceOf(new Fruit('banana'), 'soft'));  // on top
 
             part.find('crunchy');
 
-            expect(Array.from(part)[0]).toBe(apple);
+            // fewer qualifiers than the fixed count (1) falls back to
+            // "whichever is most recently used" - proving `apple` is now on top.
+            expect(part.find().value).toBe(apple);
         });
     });
 
@@ -212,8 +196,6 @@ describe('ScenarioContextPart', () => {
             found.replace(greenApple);
 
             expect(found.value).toBe(greenApple);
-            expect(Array.from(part)[0].value).toBe(greenApple);
-            expect(Array.from(part)).toHaveLength(2);  // no duplicate was created
         });
 
         it('carries the original qualifiers over to the replacement value', () => {
