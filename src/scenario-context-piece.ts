@@ -1,8 +1,10 @@
+import { Qualifiers } from './qualifiers';
+
 /**
  * A single piece of information held in a {@link ScenarioContext}.
  *
  * A piece pairs an arbitrary domain object (the {@link ScenarioContextPiece#value})
- * with a set of free-form `qualifiers` - short labels that make it possible
+ * with a set of named `qualifiers` - key/value pairs that make it possible
  * to tell apart several pieces holding objects of the same type, e.g. several
  * `Ticket` instances qualified by their id, or by their priority. Qualifiers,
  * once set, never change; the value can be swapped out via
@@ -10,15 +12,15 @@
  */
 export class ScenarioContextPiece<Value = unknown> {
 
-    private readonly qualifiers: ReadonlySet<string>;
+    private readonly qualifiers: ReadonlyMap<string, string>;
     private currentValue: Value;
 
     constructor(
         value: Value,
-        qualifiers: Iterable<string> = [],
+        qualifiers: Qualifiers = {},
     ) {
         this.currentValue = value;
-        this.qualifiers = new Set(qualifiers);
+        this.qualifiers = new Map(Object.entries(qualifiers));
     }
 
     /**
@@ -37,13 +39,13 @@ export class ScenarioContextPiece<Value = unknown> {
     }
 
     /**
-     * @returns `true` if this piece is qualified by every one of the given
-     *  `qualifiers` (in any order). An empty list of `qualifiers` always
-     *  matches.
+     * @returns `true` if this piece carries every key/value pair given in
+     *  `qualifiers` - regardless of any other keys it might also carry. An
+     *  empty object always matches.
      */
-    hasQualifiers(qualifiers: Iterable<string>): boolean {
-        for (const qualifier of qualifiers) {
-            if (! this.qualifiers.has(qualifier)) {
+    hasQualifiers(qualifiers: Qualifiers): boolean {
+        for (const [ key, value ] of Object.entries(qualifiers)) {
+            if (this.qualifiers.get(key) !== value) {
                 return false;
             }
         }
@@ -52,21 +54,37 @@ export class ScenarioContextPiece<Value = unknown> {
     }
 
     /**
-     * @returns all the qualifiers recorded against this piece.
+     * @returns every qualifier recorded against this piece, keyed by name.
      */
-    allQualifiers(): ReadonlySet<string> {
+    allQualifiers(): ReadonlyMap<string, string> {
         return this.qualifiers;
     }
 
-    qualifierCount(): number {
-        return this.qualifiers.size;
+    /**
+     * @returns the set of qualifier keys recorded against this piece.
+     */
+    qualifierKeys(): ReadonlySet<string> {
+        return new Set(this.qualifiers.keys());
+    }
+
+    /**
+     * @returns `true` if `other` carries the exact same set of qualifier
+     *  keys as this piece - neither more, nor fewer - regardless of the
+     *  values behind them.
+     */
+    hasSameQualifierKeysAs(other: ScenarioContextPiece): boolean {
+        const otherKeys = other.qualifierKeys();
+        const thisKeys = this.qualifierKeys();
+
+        return thisKeys.size === otherKeys.size && [ ...thisKeys ].every(key => otherKeys.has(key));
     }
 
     /**
      * @returns `true` if `other` is qualified by the exact same combination
-     *  of qualifiers as this piece - neither more, nor fewer.
+     *  of key/value pairs as this piece - neither more, nor fewer.
      */
     hasSameQualifiersAs(other: ScenarioContextPiece): boolean {
-        return this.qualifierCount() === other.qualifierCount() && this.hasQualifiers(other.allQualifiers());
+        return this.qualifiers.size === other.allQualifiers().size
+            && this.hasQualifiers(Object.fromEntries(other.allQualifiers()));
     }
 }

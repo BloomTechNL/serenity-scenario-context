@@ -30,19 +30,19 @@ describe('UseScenarioContext', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = new Fruit('apple');
 
-            ability.add(apple, 'crunchy', 'red');
+            ability.add(apple, { texture: 'crunchy', color: 'red' });
 
-            expect(ability.find(Fruit, 'red')).toBe(apple);
+            expect(ability.find(Fruit, { color: 'red' })).toBe(apple);
         });
 
         it('returns the context piece that was created, for convenience', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = new Fruit('apple');
 
-            const piece = ability.add(apple, 'red');
+            const piece = ability.add(apple, { color: 'red' });
 
             expect(piece.value).toBe(apple);
-            expect(piece.hasQualifiers([ 'red' ])).toBe(true);
+            expect(piece.hasQualifiers({ color: 'red' })).toBe(true);
         });
     });
 
@@ -51,22 +51,22 @@ describe('UseScenarioContext', () => {
         it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {
             const context = new ScenarioContext();
             const ability = UseScenarioContext.using(context);
-            const apple = context.add(new Fruit('apple'), 'crunchy').value;
+            const apple = context.add(new Fruit('apple'), { texture: 'crunchy' }).value;
 
-            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
+            expect(ability.find(Fruit, { texture: 'crunchy' })).toBe(apple);
         });
 
-        it('insists on exactly one match when exactly as many qualifiers as the type takes are given', () => {
+        it('insists on exactly one match when every qualifier key the type takes is given', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
-            const apple = ability.add(new Fruit('apple'), 'crunchy').value;
+            const apple = ability.add(new Fruit('apple'), { texture: 'crunchy' }).value;
 
-            expect(ability.find(Fruit, 'crunchy')).toBe(apple);
+            expect(ability.find(Fruit, { texture: 'crunchy' })).toBe(apple);
         });
 
-        it('falls back to the most recently used match when fewer qualifiers than the type takes are given', () => {
+        it('falls back to the most recently used match when fewer keys than the type takes are given', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
-            ability.add(new Fruit('apple'), 'gala');
-            const banana = ability.add(new Fruit('banana'), 'cavendish').value;
+            ability.add(new Fruit('apple'), { variety: 'gala' });
+            const banana = ability.add(new Fruit('banana'), { variety: 'cavendish' }).value;
 
             expect(ability.find(Fruit)).toBe(banana);
         });
@@ -77,20 +77,20 @@ describe('UseScenarioContext', () => {
         it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {
             const context = new ScenarioContext();
             const ability = UseScenarioContext.using(context);
-            const apple = context.add(new Fruit('apple'), 'crunchy').value;
+            const apple = context.add(new Fruit('apple'), { texture: 'crunchy' }).value;
 
-            expect(ability.findPiece(Fruit, 'crunchy').value).toBe(apple);
+            expect(ability.findPiece(Fruit, { texture: 'crunchy' }).value).toBe(apple);
         });
 
         it('returns the piece, letting the caller replace its value afterwards', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
-            ability.add(new Fruit('apple'), 'crunchy');
+            ability.add(new Fruit('apple'), { texture: 'crunchy' });
 
-            const found = ability.findPiece(Fruit, 'crunchy');
+            const found = ability.findPiece(Fruit, { texture: 'crunchy' });
             const greenApple = new Fruit('green apple');
             found.replace(greenApple);
 
-            expect(ability.find(Fruit, 'crunchy')).toBe(greenApple);
+            expect(ability.find(Fruit, { texture: 'crunchy' })).toBe(greenApple);
         });
     });
 });

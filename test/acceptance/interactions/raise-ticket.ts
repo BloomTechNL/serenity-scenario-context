@@ -38,6 +38,6 @@ export const raiseTicket = (details: {
 
         const ticketContext = new TicketContext(response.id, subject);
 
-        UseScenarioContext.as(actor).add(ticketContext, details.label ?? randomUUID());
+        UseScenarioContext.as(actor).add(ticketContext, { label: details.label ?? randomUUID() });
     });
 };

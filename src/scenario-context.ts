@@ -1,4 +1,5 @@
 import { Constructor } from './constructor';
+import { Qualifiers } from './qualifiers';
 import { ScenarioContextPart } from './scenario-context-part';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
@@ -18,12 +19,12 @@ export class ScenarioContext {
      *  convenience.
      *
      * @throws Error
-     *  if `value`'s type has already been added with a different *number*
-     *  of qualifiers, or if a piece of that type already exists in this
+     *  if `value`'s type has already been added with a different *set of
+     *  qualifier keys*, or if a piece of that type already exists in this
      *  context with this exact combination of qualifiers - see
      *  {@link ScenarioContextPart}.
      */
-    add<Value extends object>(value: Value, ...qualifiers: string[]): ScenarioContextPiece<Value> {
+    add<Value extends object>(value: Value, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
         const piece = new ScenarioContextPiece(value, qualifiers);
 
         this.partFor(constructorOf(value) as Constructor<Value>).add(piece);

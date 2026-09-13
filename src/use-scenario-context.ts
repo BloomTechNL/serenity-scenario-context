@@ -1,6 +1,7 @@
 import { Ability } from '@serenity-js/core';
 
 import { Constructor } from './constructor';
+import { Qualifiers } from './qualifiers';
 import { ScenarioContext } from './scenario-context';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
@@ -27,7 +28,7 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  *   .whoCan(UseScenarioContext.using())
  *   .attemptsTo(
  *     Interaction.where('#actor raises a ticket', actor =>
- *       UseScenarioContext.as(actor).add(new Ticket('TICKET-1'), 'urgent')),
+ *       UseScenarioContext.as(actor).add(new Ticket('TICKET-1'), { priority: 'urgent' })),
  *   )
  * ```
  *
@@ -35,10 +36,10 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  *
  * ```ts
  * // when the value itself is all you need:
- * const ticket = UseScenarioContext.as(actor).find(Ticket, 'urgent');
+ * const ticket = UseScenarioContext.as(actor).find(Ticket, { priority: 'urgent' });
  *
  * // when you'll want to swap it out afterwards:
- * const found = UseScenarioContext.as(actor).findPiece(Ticket, 'urgent');
+ * const found = UseScenarioContext.as(actor).findPiece(Ticket, { priority: 'urgent' });
  * found.replace(newTicket); // swaps it out for newTicket, in place
  * ```
  *
@@ -69,23 +70,23 @@ export class UseScenarioContext extends Ability {
      *  convenience.
      *
      * @throws Error
-     *  if `value`'s type has already been added with a different *number*
-     *  of qualifiers, or if a piece of that type already exists in the
+     *  if `value`'s type has already been added with a different *set of
+     *  qualifier keys*, or if a piece of that type already exists in the
      *  scenario context with this exact combination of qualifiers - see
      *  {@link ScenarioContext}.
      */
-    add<Value extends object>(value: Value, ...qualifiers: string[]): ScenarioContextPiece<Value> {
-        return this.scenarioContext.add(value, ...qualifiers);
+    add<Value extends object>(value: Value, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
+        return this.scenarioContext.add(value, qualifiers);
     }
 
     /**
-     * Finds the value of `type`, qualified by every one of `qualifiers` -
-     * see {@link ScenarioContextPart#find}. Reach for
+     * Finds the value of `type`, qualified by every key/value pair in
+     * `qualifiers` - see {@link ScenarioContextPart#find}. Reach for
      * {@link UseScenarioContext#findPiece} instead when you'll want to swap
      * the value out afterwards.
      */
-    find<Value>(type: Constructor<Value>, ...qualifiers: string[]): Value {
-        return this.scenarioContext.partFor(type).find(...qualifiers);
+    find<Value>(type: Constructor<Value>, qualifiers: Qualifiers = {}): Value {
+        return this.scenarioContext.partFor(type).find(qualifiers);
     }
 
     /**
@@ -94,7 +95,7 @@ export class UseScenarioContext extends Ability {
      * value - call {@link ScenarioContextPiece#replace} on it to swap the
      * value out for a new one, in place.
      */
-    findPiece<Value>(type: Constructor<Value>, ...qualifiers: string[]): ScenarioContextPiece<Value> {
-        return this.scenarioContext.partFor(type).findPiece(...qualifiers);
+    findPiece<Value>(type: Constructor<Value>, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
+        return this.scenarioContext.partFor(type).findPiece(qualifiers);
     }
 }

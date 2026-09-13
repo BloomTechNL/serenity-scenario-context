@@ -1,19 +1,32 @@
 import { Constructor } from './constructor';
+import { Qualifiers } from './qualifiers';
+
+function describeKeys(keys: Iterable<string>): string {
+    const sorted = [ ...keys ].sort();
+
+    return sorted.length > 0 ? sorted.join(', ') : 'no keys';
+}
+
+function describeQualifiers(qualifiers: ReadonlyMap<string, string> | Qualifiers): string {
+    const entries = qualifiers instanceof Map ? [ ...qualifiers.entries() ] : Object.entries(qualifiers);
+    const sorted = entries.map(([ key, value ]) => `${ key }=${ value }`).sort();
+
+    return sorted.length > 0 ? sorted.join(', ') : 'no qualifiers';
+}
 
 /**
- * Thrown by {@link ScenarioContextPart#add} when a piece is added whose
- * number of qualifiers doesn't match the number already established for
- * its type.
+ * Thrown by {@link ScenarioContextPart#add} when a piece is added whose set
+ * of qualifier keys doesn't match the set already established for its type.
  */
-export class UnexpectedQualifierCountError extends Error {
+export class UnexpectedQualifierKeysError extends Error {
 
-    constructor(type: Constructor<unknown>, actualCount: number, expectedCount: number) {
+    constructor(type: Constructor<unknown>, actualKeys: ReadonlySet<string>, expectedKeys: ReadonlySet<string>) {
         super(
-            `Could not add ${ type.name } qualified by ${ actualCount } qualifier(s) - every ${ type.name } `
-            + `in the scenario context must be qualified by exactly ${ expectedCount } qualifier(s), `
+            `Could not add ${ type.name } qualified by ${ describeKeys(actualKeys) } - every ${ type.name } `
+            + `in the scenario context must be qualified by exactly ${ describeKeys(expectedKeys) }, `
             + 'as established when the first one was added'
         );
-        this.name = 'UnexpectedQualifierCountError';
+        this.name = 'UnexpectedQualifierKeysError';
     }
 }
 
@@ -23,11 +36,9 @@ export class UnexpectedQualifierCountError extends Error {
  */
 export class DuplicateQualifiersError extends Error {
 
-    constructor(type: Constructor<unknown>, qualifiers: ReadonlySet<string>) {
-        const description = [ ...qualifiers ].join(', ') || 'no qualifiers';
-
+    constructor(type: Constructor<unknown>, qualifiers: ReadonlyMap<string, string>) {
         super(
-            `Could not add ${ type.name } qualified by ${ description } - a ${ type.name } `
+            `Could not add ${ type.name } qualified by ${ describeQualifiers(qualifiers) } - a ${ type.name } `
             + 'qualified exactly like that is already part of the scenario context'
         );
         this.name = 'DuplicateQualifiersError';
@@ -35,17 +46,17 @@ export class DuplicateQualifiersError extends Error {
 }
 
 /**
- * Thrown by {@link ScenarioContextPart#find} when it's given more
- * qualifiers than its type takes.
+ * Thrown by {@link ScenarioContextPart#find} when it's given a qualifier
+ * key that isn't one of the keys established for its type.
  */
-export class TooManyQualifiersError extends Error {
+export class UnknownQualifierKeyError extends Error {
 
-    constructor(type: Constructor<unknown>, expectedCount: number, actualCount: number) {
+    constructor(type: Constructor<unknown>, expectedKeys: ReadonlySet<string>, unknownKeys: string[]) {
         super(
-            `${ type.name } takes ${ expectedCount } qualifier(s), but ${ actualCount } `
-            + `${ actualCount === 1 ? 'was' : 'were' } given to find()`
+            `${ type.name } is qualified by ${ describeKeys(expectedKeys) }, but ${ [ ...unknownKeys ].sort().join(', ') } `
+            + `${ unknownKeys.length === 1 ? 'is' : 'are' } not among them`
         );
-        this.name = 'TooManyQualifiersError';
+        this.name = 'UnknownQualifierKeyError';
     }
 }
 
@@ -55,9 +66,10 @@ export class TooManyQualifiersError extends Error {
  */
 export class PieceNotFoundError extends Error {
 
-    constructor(type: Constructor<unknown>, qualifiers: string[]) {
-        const description = qualifiers.length > 0
-            ? `${ type.name } qualified by ${ qualifiers.join(', ') } in the scenario context`
+    constructor(type: Constructor<unknown>, qualifiers: Qualifiers) {
+        const entries = Object.entries(qualifiers);
+        const description = entries.length > 0
+            ? `${ type.name } qualified by ${ describeQualifiers(qualifiers) } in the scenario context`
             : `${ type.name } in the scenario context`;
 
         super(`Could not find ${ description }`);

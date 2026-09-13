@@ -8,7 +8,7 @@ import { UseSupportDeskApi } from '../use-support-desk-api';
 export const login = () =>
     Interaction.where('#actor logs in', actor => {
         const credentials = UseScenarioContext.as(actor)
-            .find(LoginCredentialContext, actorInTheSpotlight().name);
+            .find(LoginCredentialContext, { actor: actorInTheSpotlight().name });
 
         const session = UseSupportDeskApi.as(actor).post<SessionRepresentation>('/login', {
             username: credentials.username,

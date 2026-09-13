@@ -16,9 +16,9 @@ describe('ScenarioContext', () => {
 
         it('puts the piece in the part for its type', () => {
             const context = new ScenarioContext();
-            const piece = context.add(new Widget('spanner'), 'metal');
+            const piece = context.add(new Widget('spanner'), { material: 'metal' });
 
-            expect(context.partFor(Widget).findPiece('metal')).toBe(piece);
+            expect(context.partFor(Widget).findPiece({ material: 'metal' })).toBe(piece);
         });
 
         it('returns the piece that was put, for convenience', () => {
@@ -29,20 +29,20 @@ describe('ScenarioContext', () => {
 
         it('routes pieces of different types to different parts', () => {
             const context = new ScenarioContext();
-            const widget = context.add(new Widget('spanner'), 'metal');
+            const widget = context.add(new Widget('spanner'), { material: 'metal' });
             const gadget = context.add(new Gadget('gizmo'));
 
-            expect(context.partFor(Widget).findPiece('metal')).toBe(widget);
+            expect(context.partFor(Widget).findPiece({ material: 'metal' })).toBe(widget);
             expect(context.partFor(Gadget).findPiece()).toBe(gadget);
         });
 
-        it('propagates the fixed-qualifier-count and uniqueness constraints enforced by the part - see ScenarioContextPart', () => {
+        it('propagates the fixed-qualifier-keys and uniqueness constraints enforced by the part - see ScenarioContextPart', () => {
             const context = new ScenarioContext();
-            context.add(new Widget('spanner'), 'metal');
+            context.add(new Widget('spanner'), { material: 'metal' });
 
-            expect(() => context.add(new Widget('mallet'), 'wood', 'heavy')).toThrow(
-                'Could not add Widget qualified by 2 qualifier(s) - every Widget in the scenario context must be '
-                + 'qualified by exactly 1 qualifier(s), as established when the first one was added'
+            expect(() => context.add(new Widget('mallet'), { material: 'wood', weight: 'heavy' })).toThrow(
+                'Could not add Widget qualified by material, weight - every Widget in the scenario context must be '
+                + 'qualified by exactly material, as established when the first one was added'
             );
         });
     });
@@ -65,9 +65,9 @@ describe('ScenarioContext', () => {
 
         it('returns a part that reflects pieces added directly via the context', () => {
             const context = new ScenarioContext();
-            const piece = context.add(new Widget('spanner'), 'metal');
+            const piece = context.add(new Widget('spanner'), { material: 'metal' });
 
-            expect(context.partFor(Widget).findPiece('metal')).toBe(piece);
+            expect(context.partFor(Widget).findPiece({ material: 'metal' })).toBe(piece);
         });
 
         it('is a ScenarioContextPart', () => {
