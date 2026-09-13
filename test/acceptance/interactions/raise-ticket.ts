@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {Interaction} from '@serenity-js/core';
 
 import {UseScenarioContext} from '../../../src/index';
@@ -35,8 +37,7 @@ export const raiseTicket = (details: {
         });
 
         const ticketContext = new TicketContext(response.id, subject);
-        const qualifiers = details.label ? [details.label] : [];
 
-        UseScenarioContext.as(actor).add(ticketContext, ...qualifiers);
+        UseScenarioContext.as(actor).add(ticketContext, details.label ?? randomUUID());
     });
 };

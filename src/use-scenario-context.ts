@@ -70,6 +70,12 @@ export class UseScenarioContext extends Ability {
      *
      * @returns the {@link ScenarioContextPiece} that was created, for
      *  convenience.
+     *
+     * @throws Error
+     *  if `value`'s type has already been added with a different *number*
+     *  of qualifiers, or if a piece of that type already exists in the
+     *  scenario context with this exact combination of qualifiers - see
+     *  {@link ScenarioContext}.
      */
     add<Value extends object>(value: Value, ...qualifiers: string[]): ScenarioContextPiece<Value> {
         return this.scenarioContext.add(value, ...qualifiers);

@@ -10,9 +10,8 @@ export function ticket(label?: string) {
     const description = label ? `ticket labelled ${ label }` : 'the ticket in the spotlight';
 
     return Question.about(description, actor => {
-        const qualifiers = label ? [label] : [];
-
-        const found = UseScenarioContext.as(actor).withType(TicketContext).withQualifiers(...qualifiers).findLastUsed().getValue();
+        const qualifiers = label ? [ label ] : [];
+        const found = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers).getValue();
 
         const representation = UseSupportDeskApi.as(actor).get<TicketRepresentation>(`/tickets/${ found.id }`);
 
@@ -28,9 +27,8 @@ export function expectedTicket(label?: string) {
     const description = label ? `remembered ticket labelled ${ label }` : 'the remembered ticket in the spotlight';
 
     return Question.about(description, actor => {
-        const qualifiers = label ? [label] : [];
-
-        const found = UseScenarioContext.as(actor).withType(TicketContext).withQualifiers(...qualifiers).findLastUsed().getValue();
+        const qualifiers = label ? [ label ] : [];
+        const found = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers).getValue();
 
         return {
             subject: found.subject,

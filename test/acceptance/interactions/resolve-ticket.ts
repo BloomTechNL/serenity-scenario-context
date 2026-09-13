@@ -10,12 +10,8 @@ export const resolveTicket = (label?: string) =>
     Interaction.where(
         label ? `#actor resolves the ticket labelled ${ label }` : '#actor resolves the ticket in the spotlight',
         actor => {
-            const scenarioContext = UseScenarioContext.as(actor);
-            const searcher = scenarioContext.withType(TicketContext);
-
-            const ticket = label
-                ? searcher.withQualifiers(label).findOne().getValue()
-                : searcher.findLastUsed().getValue();
+            const qualifiers = label ? [ label ] : [];
+            const ticket = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers).getValue();
 
             UseSupportDeskApi.as(actor).post<TicketRepresentation>(
                 `/tickets/${ ticket.id }/resolve`, undefined, 200,

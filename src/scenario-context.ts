@@ -1,3 +1,4 @@
+import { Constructor } from './constructor';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
@@ -5,14 +6,19 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  * as an ordered stack: the piece that was put on top most recently is
  * iterated over first.
  *
- * `ScenarioContext` itself doesn't know anything about "types" or how
- * qualifiers should be interpreted - it merely remembers the order in which
- * pieces were put on top. That interpretation is the responsibility of its
- * consumers, such as the {@link UseScenarioContext} ability.
+ * Every *type* of value held here has a fixed number of qualifiers that
+ * goes with it, established by however many qualifiers the first piece of
+ * that type was added with. Every later piece of the same type - whether
+ * added via `add` or swapped in via `replace` - must carry exactly that
+ * many qualifiers, and no two pieces of the same type may carry the exact
+ * same combination of them: the combination acts like a composite key that
+ * tells same-typed pieces apart. {@link ScenarioContextSearcher#find} relies
+ * on the fixed count to decide how a search should be resolved.
  */
 export class ScenarioContext implements Iterable<ScenarioContextPiece> {
 
     private readonly pieces: ScenarioContextPiece[] = [];
+    private readonly qualifierCounts = new Map<Constructor<unknown>, number>();
 
     /**
      * Puts a new context piece on top of this context - either an
@@ -22,6 +28,11 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
      * that adding through the ability doesn't.
      *
      * @returns the piece that was put on top, for convenience.
+     *
+     * @throws Error
+     *  if `piece`'s number of qualifiers doesn't match the number already
+     *  established for its type, or if a piece of that type already exists
+     *  in this context with the exact same combination of qualifiers.
      */
     add<Value>(piece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value>;
     add<Value extends object>(value: Value, ...qualifiers: string[]): ScenarioContextPiece<Value>;
@@ -29,6 +40,8 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
         const piece = pieceOrValue instanceof ScenarioContextPiece
             ? pieceOrValue
             : new ScenarioContextPiece(pieceOrValue, qualifiers);
+
+        this.assertSatisfiesTypeConstraints(piece);
 
         this.pieces.unshift(piece);
 
@@ -62,7 +75,11 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
      * @returns `newPiece`, for convenience.
      *
      * @throws Error
-     *  if `oldPiece` is not (or is no longer) part of this context.
+     *  if `oldPiece` is not (or is no longer) part of this context; if
+     *  `newPiece`'s number of qualifiers doesn't match the number already
+     *  established for its type; or if some *other* piece of that type
+     *  already occupies the exact same combination of qualifiers that
+     *  `newPiece` carries.
      */
     replace<Value>(oldPiece: ScenarioContextPiece<Value>, newPiece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value> {
         const index = this.pieces.indexOf(oldPiece);
@@ -71,9 +88,21 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
             throw new Error('Could not replace the context piece because it is not part of this scenario context');
         }
 
+        this.assertSatisfiesTypeConstraints(newPiece, oldPiece);
+
         this.pieces[index] = newPiece;
 
         return newPiece;
+    }
+
+    /**
+     * @returns the fixed number of qualifiers established for `type` -
+     *  however many qualifiers the first piece whose value was an instance
+     *  of `type` was added with - or `undefined` if no piece of that type
+     *  has been added to this context yet.
+     */
+    qualifierCountFor(type: Constructor<unknown>): number | undefined {
+        return this.qualifierCounts.get(type);
     }
 
     /**
@@ -83,4 +112,70 @@ export class ScenarioContext implements Iterable<ScenarioContextPiece> {
     [Symbol.iterator](): Iterator<ScenarioContextPiece> {
         return this.pieces[Symbol.iterator]();
     }
+
+    /**
+     * Establishes - or, once established, enforces - this context's two
+     * invariants for `piece`'s type: every piece of that type carries the
+     * same number of qualifiers as the first one ever added, and no two
+     * pieces of that type carry the exact same combination of qualifiers.
+     *
+     * `ignore`, when given, is left out of the uniqueness check - used by
+     * `replace` so that putting a piece back with the same qualifiers it
+     * already had isn't mistaken for a clash with itself.
+     */
+    private assertSatisfiesTypeConstraints(piece: ScenarioContextPiece<unknown>, ignore?: ScenarioContextPiece): void {
+        const type = constructorOf(piece.value);
+        const qualifierCount = piece.allQualifiers().size;
+        const establishedCount = this.qualifierCounts.get(type);
+
+        if (establishedCount === undefined) {
+            this.qualifierCounts.set(type, qualifierCount);
+        } else if (qualifierCount !== establishedCount) {
+            throw new Error(
+                `Could not add ${ type.name } qualified by ${ qualifierCount } qualifier(s) - every ${ type.name } `
+                + `in the scenario context must be qualified by exactly ${ establishedCount } qualifier(s), `
+                + 'as established when the first one was added'
+            );
+        }
+
+        const duplicate = this.pieces.some(existing =>
+            existing !== ignore
+            && constructorOf(existing.value) === type
+            && haveTheSameQualifiers(existing, piece),
+        );
+
+        if (duplicate) {
+            throw new Error(
+                `Could not add ${ type.name } qualified by ${ describeQualifiers(piece) } - a ${ type.name } `
+                + 'qualified exactly like that is already part of the scenario context'
+            );
+        }
+    }
+}
+
+function constructorOf(value: unknown): Constructor<unknown> {
+    return Object(value).constructor as Constructor<unknown>;
+}
+
+function haveTheSameQualifiers(a: ScenarioContextPiece, b: ScenarioContextPiece): boolean {
+    const aQualifiers = a.allQualifiers();
+    const bQualifiers = b.allQualifiers();
+
+    if (aQualifiers.size !== bQualifiers.size) {
+        return false;
+    }
+
+    for (const qualifier of aQualifiers) {
+        if (! bQualifiers.has(qualifier)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function describeQualifiers(piece: ScenarioContextPiece): string {
+    const qualifiers = [ ...piece.allQualifiers() ];
+
+    return qualifiers.length > 0 ? qualifiers.join(', ') : 'no qualifiers';
 }

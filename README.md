@@ -63,7 +63,20 @@ rather than by a key invented purely for storage.
 - [`ScenarioContext`](src/scenario-context.ts) - an ordered stack of pieces.
   It can iterate top to bottom, put a new piece on top (either an
   already-built `ScenarioContextPiece`, or a plain value plus its
-  qualifiers), and move an existing piece back to the top.
+  qualifiers), and move an existing piece back to the top. It also holds two
+  invariants per *type* of value it's given, enforced by `add` and
+  `replace`:
+  - every piece of a given type is qualified by the same, fixed *number* of
+    qualifiers - however many the first piece of that type was added with;
+  - no two pieces of that type carry the exact same *combination* of
+    qualifiers - the combination acts like a composite key.
+
+  Both exist so that a search using exactly that many qualifiers can never
+  be ambiguous, which is what lets `find` (below) decide how to resolve a
+  search on your behalf. A consequence worth knowing: if some `Ticket`s in
+  your scenario are labelled and others aren't, they still all need the
+  *same number* of qualifiers - see the callout under Usage below for how
+  to handle that.
 - [`UseScenarioContext`](src/use-scenario-context.ts) - the Serenity/JS
   `Ability`. Actors use it to `add` domain objects, qualified however you
   like, and `withType(Type)` to start searching for them again.
@@ -73,7 +86,17 @@ rather than by a key invented purely for storage.
   - `findOne()` - insists that exactly one piece matches, and throws
     otherwise (including when more than one does - it doesn't guess);
   - `findLastUsed()` - when several pieces might match, returns whichever
-    one was put on top of the context most recently, no questions asked.
+    one was put on top of the context most recently, no questions asked;
+  - `find(...qualifiers)` - a shorthand that decides between the two for
+    you, based on how many `qualifiers` you give it (combined with any
+    already accumulated via `withQualifiers`) relative to the type's fixed
+    qualifier count: given exactly that many, it behaves like `findOne()`
+    (unambiguous by construction - either the match, or an error); given
+    fewer, like `findLastUsed()`; given more, it throws outright, since no
+    piece could possibly have that many qualifiers. Handy for something
+    like "the ticket labelled `label`, when `label` was given, or the
+    ticket in the spotlight otherwise" without spelling out the `? :`
+    every time.
 
   Either way, the piece that's found is put back on top of the context -
   "in the spotlight" - so that whatever you search for next, without being
@@ -92,6 +115,7 @@ rather than by a key invented purely for storage.
 ## Usage
 
 ```ts
+import { randomUUID } from 'node:crypto';
 import { actorCalled, Interaction, Question } from '@serenity-js/core';
 import { Ensure, equals } from '@serenity-js/assertions';
 import { UseScenarioContext } from 'serenity-scenario-context';
@@ -105,7 +129,10 @@ class Ticket {
 
 const raiseTicket = (ticket: Ticket, label?: string) =>
     Interaction.where(`#actor raises ticket ${ ticket.id }`, actor => {
-        UseScenarioContext.as(actor).add(ticket, ...(label ? [ label ] : []));
+        // every Ticket gets exactly one qualifier - the label it was given,
+        // or an anonymous one nobody's likely to search for - so labelled
+        // and unlabelled tickets can still coexist (see the callout below).
+        UseScenarioContext.as(actor).add(ticket, label ?? randomUUID());
     });
 
 const resolveTicketLabelled = (label: string) =>
@@ -147,6 +174,19 @@ A few things worth calling out:
   `theTicketLabelled(...)` are only handed the actor performing or asking
   them once they actually run, via `attemptsTo`/`Ensure.that` - not by the
   code that builds them.
+- Every `Ticket` here is qualified by exactly one qualifier, whether or not
+  the caller supplied a `label` - because the *number* of qualifiers a type
+  is qualified by is fixed the moment the first one is added (see
+  [`ScenarioContext`](#the-building-blocks) above). If `raiseTicket` added
+  `ticket` with *no* qualifiers whenever `label` was omitted, the very
+  first unlabelled ticket in a scenario would fix the count at `0` - and
+  every labelled one raised afterwards (or before) would then be rejected,
+  and vice versa. Generating an anonymous qualifier when none is given
+  keeps the count consistently at `1` either way; [the real
+  `raiseTicket`](test/acceptance/interactions/raise-ticket.ts) in this
+  repo's acceptance tests does exactly this. If every `Ticket` you ever add
+  either always has a label or never does, you don't need to think about
+  this at all - the count is simply whatever the first one happens to be.
 - Qualifiers are optional and free-form: `add(ticket)` on its own is fine
   when there's only ever going to be one `Ticket` around, or when
   `findLastUsed()` is all you'll ever need.

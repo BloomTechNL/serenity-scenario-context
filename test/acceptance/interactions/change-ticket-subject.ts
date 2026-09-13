@@ -12,19 +12,15 @@ export const changeTicketSubject = (newSubject: string, label?: string) =>
             ? `#actor changes the subject of the ticket labelled ${ label } to "${ newSubject }"`
             : `#actor changes the subject of the ticket in the spotlight to "${ newSubject }"`,
         actor => {
-            const scenarioContext = UseScenarioContext.as(actor);
-            const searcher = scenarioContext.withType(TicketContext);
+            const qualifiers = label ? [ label ] : [];
+            const handle = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers);
 
-            const found = label
-                ? searcher.withQualifiers(label).findOne()
-                : searcher.findLastUsed();
-
-            const ticketContext = found.getValue();
+            const ticketContext = handle.getValue();
 
             UseSupportDeskApi.as(actor).post<TicketRepresentation>(
                 `/tickets/${ ticketContext.id }/subject`, { subject: newSubject }, 200,
             );
 
-            found.replaceValue(ticketContext.changeSubject(newSubject));
+            handle.replaceValue(ticketContext.changeSubject(newSubject));
         },
     );

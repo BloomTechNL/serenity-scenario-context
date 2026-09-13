@@ -68,8 +68,8 @@ describe('UseScenarioContext', () => {
 
         it('lets the most recently used match be found with findLastUsed(), even when several exist', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
-            ability.add(new Fruit('apple'));
-            const banana = ability.add(new Fruit('banana')).value;
+            ability.add(new Fruit('apple'), 'gala');
+            const banana = ability.add(new Fruit('banana'), 'cavendish').value;
 
             expect(ability.withType(Fruit).findLastUsed().getValue()).toBe(banana);
         });

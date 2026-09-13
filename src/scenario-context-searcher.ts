@@ -22,7 +22,8 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  * exactly one piece matches, while
  * {@link ScenarioContextSearcher#findLastUsed} explicitly opts in to
  * resolving that ambiguity by picking whichever matching piece was put on
- * top of the context most recently.
+ * top of the context most recently. {@link ScenarioContextSearcher#find}
+ * bridges the two, for when a qualifier is itself optional.
  */
 export class ScenarioContextSearcher<Value> {
 
@@ -105,6 +106,62 @@ export class ScenarioContextSearcher<Value> {
         }
 
         return this.putOnTopAndWrap(matches[0]);
+    }
+
+    /**
+     * A shorthand that decides between {@link ScenarioContextSearcher#findOne}
+     * and {@link ScenarioContextSearcher#findLastUsed} for you, based on how
+     * `qualifiers` (combined with any already accumulated by an earlier call
+     * to `withQualifiers`) compares to the fixed number of qualifiers
+     * established for this search's type (see {@link ScenarioContext}):
+     *
+     * - given exactly that many qualifiers, there can be at most one piece
+     *   qualified exactly like that - the combination is a composite key -
+     *   so this behaves like `findOne()`: either the single match, or an
+     *   error;
+     * - given fewer, several pieces might still match, so this behaves like
+     *   `findLastUsed()` instead: whichever matching piece is currently in
+     *   the spotlight, no questions asked;
+     * - given more, `qualifiers` couldn't possibly match anything, and this
+     *   throws rather than searching for something that can't exist.
+     *
+     * This is exactly the
+     * `label ? withQualifiers(label).findOne() : findLastUsed()` idiom that
+     * comes up whenever a qualifier is something a caller may or may not
+     * have on hand - e.g. resolving "the ticket labelled `label`" when
+     * `label` was given, or "the ticket in the spotlight" when it wasn't -
+     * generalized to however many qualifiers the type actually takes.
+     *
+     * ```ts
+     * // label?: string
+     * UseScenarioContext.as(actor).withType(Ticket).find(...(label ? [ label ] : []));
+     * ```
+     *
+     * @returns a {@link ScenarioContextHandle} wrapping the value that was
+     *  found - call {@link ScenarioContextHandle#getValue} to get at the
+     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
+     *  it out for a new one.
+     *
+     * @throws Error
+     *  if more qualifiers are given than the type takes; otherwise under the
+     *  same conditions as whichever of `findOne`/`findLastUsed` this
+     *  delegates to.
+     */
+    find(...qualifiers: string[]): ScenarioContextHandle<Value> {
+        const searcher = qualifiers.length > 0 ? this.withQualifiers(...qualifiers) : this;
+        const givenCount = searcher.qualifiers.length;
+        const expectedCount = this.scenarioContext.qualifierCountFor(this.type);
+
+        if (expectedCount !== undefined && givenCount > expectedCount) {
+            throw new Error(
+                `${ this.type.name } takes ${ expectedCount } qualifier(s), but ${ givenCount } `
+                + `${ givenCount === 1 ? 'was' : 'were' } given to find()`
+            );
+        }
+
+        return expectedCount !== undefined && givenCount === expectedCount
+            ? searcher.findOne()
+            : searcher.findLastUsed();
     }
 
     private matchingPieces(): Array<ScenarioContextPiece<Value>> {

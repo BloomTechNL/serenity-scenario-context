@@ -50,9 +50,9 @@ describe('ScenarioContextHandle', () => {
 
         it('leaves the position of the piece in the context unaffected', () => {
             const context = new ScenarioContext();
-            const bottom = context.add(new Fruit('banana'));
-            const middle = context.add(new Fruit('apple'));
-            const top = context.add(new Fruit('cherry'));
+            const bottom = context.add(new Fruit('banana'), 'cavendish');
+            const middle = context.add(new Fruit('apple'), 'fuji');
+            const top = context.add(new Fruit('cherry'), 'rainier');
 
             const handle = new ScenarioContextHandle(context, middle);
             const greenApple = new Fruit('green apple');
