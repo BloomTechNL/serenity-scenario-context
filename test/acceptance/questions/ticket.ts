@@ -11,7 +11,7 @@ export function ticket(label?: string) {
 
     return Question.about(description, actor => {
         const qualifiers = label ? [ label ] : [];
-        const found = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers).getValue();
+        const found = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers).getValue();
 
         const representation = UseSupportDeskApi.as(actor).get<TicketRepresentation>(`/tickets/${ found.id }`);
 
@@ -28,7 +28,7 @@ export function expectedTicket(label?: string) {
 
     return Question.about(description, actor => {
         const qualifiers = label ? [ label ] : [];
-        const found = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers).getValue();
+        const found = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers).getValue();
 
         return {
             subject: found.subject,

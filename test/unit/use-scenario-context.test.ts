@@ -1,4 +1,4 @@
-import { ScenarioContext, ScenarioContextSearcher, UseScenarioContext } from '../../src';
+import { ScenarioContext, UseScenarioContext } from '../../src';
 
 class Fruit {
     constructor(public readonly name: string) {
@@ -12,7 +12,7 @@ describe('UseScenarioContext', () => {
 
         ability.add(new Fruit('apple'));
 
-        expect(ability.withType(Fruit).findOne().getValue()).toBeInstanceOf(Fruit);
+        expect(ability.find(Fruit).getValue()).toBeInstanceOf(Fruit);
     });
 
     describe('add', () => {
@@ -23,7 +23,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple);
 
-            expect(ability.withType(Fruit).findOne().getValue()).toBe(apple);
+            expect(ability.find(Fruit).getValue()).toBe(apple);
         });
 
         it('makes the value findable by its type and qualifiers', () => {
@@ -32,7 +32,7 @@ describe('UseScenarioContext', () => {
 
             ability.add(apple, 'crunchy', 'red');
 
-            expect(ability.withType(Fruit).withQualifiers('red').findOne().getValue()).toBe(apple);
+            expect(ability.find(Fruit, 'red').getValue()).toBe(apple);
         });
 
         it('returns the context piece that was created, for convenience', () => {
@@ -46,32 +46,34 @@ describe('UseScenarioContext', () => {
         });
     });
 
-    describe('withType', () => {
+    describe('find', () => {
 
-        it('returns a ScenarioContextSearcher scoped to the given type and this ability\'s context', () => {
-            const ability = UseScenarioContext.using(new ScenarioContext());
+        it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {
+            const context = new ScenarioContext();
+            const ability = UseScenarioContext.using(context);
+            const apple = context.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.withType(Fruit)).toBeInstanceOf(ScenarioContextSearcher);
+            expect(ability.find(Fruit, 'crunchy').getValue()).toBe(apple);
         });
 
-        // The exhaustive behaviour of searching - filtering by type and
-        // qualifiers, findOne() vs findLastUsed(), the spotlight effect - is
-        // covered in ScenarioContextSearcher's own unit tests. These tests
-        // just confirm the ability wires everything up correctly.
+        // The exhaustive behaviour of searching - findOne()-like vs
+        // findLastUsed()-like, the spotlight effect - is covered in
+        // ScenarioContextPart's own unit tests. These tests just confirm the
+        // ability wires everything up correctly.
 
-        it('lets a single match be found unambiguously with findOne()', () => {
+        it('insists on exactly one match when exactly as many qualifiers as the type takes are given', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             const apple = ability.add(new Fruit('apple'), 'crunchy').value;
 
-            expect(ability.withType(Fruit).withQualifiers('crunchy').findOne().getValue()).toBe(apple);
+            expect(ability.find(Fruit, 'crunchy').getValue()).toBe(apple);
         });
 
-        it('lets the most recently used match be found with findLastUsed(), even when several exist', () => {
+        it('falls back to the most recently used match when fewer qualifiers than the type takes are given', () => {
             const ability = UseScenarioContext.using(new ScenarioContext());
             ability.add(new Fruit('apple'), 'gala');
             const banana = ability.add(new Fruit('banana'), 'cavendish').value;
 
-            expect(ability.withType(Fruit).findLastUsed().getValue()).toBe(banana);
+            expect(ability.find(Fruit).getValue()).toBe(banana);
         });
     });
 });

@@ -2,8 +2,8 @@ import { Ability } from '@serenity-js/core';
 
 import { Constructor } from './constructor';
 import { ScenarioContext } from './scenario-context';
+import { ScenarioContextHandle } from './scenario-context-handle';
 import { ScenarioContextPiece } from './scenario-context-piece';
-import { ScenarioContextSearcher } from './scenario-context-searcher';
 
 /**
  * An {@link https://serenity-js.org/api/core/class/Ability/ | Ability} that
@@ -35,11 +35,7 @@ import { ScenarioContextSearcher } from './scenario-context-searcher';
  * ## Recalling something
  *
  * ```ts
- * // when you expect exactly one match:
- * const ticket = UseScenarioContext.as(actor).withType(Ticket).withQualifiers('urgent').findOne();
- *
- * // when several might match, and the most recently used one will do:
- * const ticket = UseScenarioContext.as(actor).withType(Ticket).findLastUsed();
+ * const ticket = UseScenarioContext.as(actor).find(Ticket, 'urgent');
  *
  * ticket.getValue();               // the Ticket itself
  * ticket.replaceValue(newTicket);  // swaps it out for newTicket, in place
@@ -82,14 +78,25 @@ export class UseScenarioContext extends Ability {
     }
 
     /**
-     * Starts a search of the scenario context for pieces whose value is an
-     * instance of `type`. Narrow the search down further with
-     * {@link ScenarioContextSearcher#withQualifiers}, then resolve it with
-     * either {@link ScenarioContextSearcher#findOne} - when you expect at
-     * most one match - or {@link ScenarioContextSearcher#findLastUsed} -
-     * when several might match and the most recently used one will do.
+     * Finds the piece of `type`, qualified by every one of `qualifiers`, the
+     * way {@link ScenarioContextPart#find} describes: given exactly as many
+     * qualifiers as `type` takes, there can be at most one match, so this
+     * insists on exactly one; given fewer, whichever match was put on top
+     * of the scenario context most recently is returned, no questions
+     * asked; given more than `type` takes, this throws rather than
+     * searching for something that can't exist.
+     *
+     * @returns a {@link ScenarioContextHandle} wrapping the value that was
+     *  found - call {@link ScenarioContextHandle#getValue} to get at the
+     *  value itself, or {@link ScenarioContextHandle#replaceValue} to swap
+     *  it out for a new one.
+     *
+     * @throws Error
+     *  if more qualifiers are given than `type` takes; if no piece matches;
+     *  or if several do and exactly as many qualifiers as `type` takes were
+     *  given.
      */
-    withType<Value>(type: Constructor<Value>): ScenarioContextSearcher<Value> {
-        return new ScenarioContextSearcher(this.scenarioContext, type);
+    find<Value>(type: Constructor<Value>, ...qualifiers: string[]): ScenarioContextHandle<Value> {
+        return this.scenarioContext.partFor(type).find(...qualifiers);
     }
 }

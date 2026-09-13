@@ -11,7 +11,7 @@ export const resolveTicket = (label?: string) =>
         label ? `#actor resolves the ticket labelled ${ label }` : '#actor resolves the ticket in the spotlight',
         actor => {
             const qualifiers = label ? [ label ] : [];
-            const ticket = UseScenarioContext.as(actor).withType(TicketContext).find(...qualifiers).getValue();
+            const ticket = UseScenarioContext.as(actor).find(TicketContext, ...qualifiers).getValue();
 
             UseSupportDeskApi.as(actor).post<TicketRepresentation>(
                 `/tickets/${ ticket.id }/resolve`, undefined, 200,

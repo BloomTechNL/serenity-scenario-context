@@ -12,8 +12,8 @@ import { ErrorRepresentation, HttpApi, HttpResponse } from './system-under-test/
  * It mirrors how a real HTTP client is used in a Screenplay Pattern test: a
  * request is made, a status code comes back, and the caller decides what to
  * do about anything other than the status it expected - here, by failing
- * loudly, the same way `ScenarioContextSearcher` does when its own
- * assumptions are violated.
+ * loudly, the same way `ScenarioContextPart` does when its own assumptions
+ * are violated.
  *
  * It also holds on to the session token from a successful login, and
  * attaches it to every subsequent request as an `Authorization` header -

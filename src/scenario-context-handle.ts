@@ -1,20 +1,20 @@
-import { ScenarioContext } from './scenario-context';
+import { ScenarioContextPart } from './scenario-context-part';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
- * Returned by {@link ScenarioContextSearcher#findOne} and
- * {@link ScenarioContextSearcher#findLastUsed} instead of the found value
+ * Returned by {@link ScenarioContextPart#findOne} and
+ * {@link ScenarioContextPart#findLastUsed} instead of the found value
  * itself, a `ScenarioContextHandle` stands in for it while keeping hold of
  * the {@link ScenarioContextPiece} it came from.
  *
  * A {@link ScenarioContextPiece} is immutable - it can't swap out its own
  * value. `ScenarioContextHandle#replaceValue` does the equivalent for you: it
  * builds a new piece, carrying over the same qualifiers, and swaps it into
- * the same spot in the underlying {@link ScenarioContext} that the original
- * piece occupied.
+ * the same spot in the underlying {@link ScenarioContextPart} that the
+ * original piece occupied.
  *
  * ```ts
- * const ticket = UseScenarioContext.as(actor).withType(Ticket).findOne();
+ * const ticket = UseScenarioContext.as(actor).find(Ticket);
  *
  * ticket.replaceValue(ticket.getValue().resolve());
  *
@@ -25,7 +25,7 @@ import { ScenarioContextPiece } from './scenario-context-piece';
 export class ScenarioContextHandle<Value> {
 
     constructor(
-        private readonly scenarioContext: ScenarioContext,
+        private readonly part: ScenarioContextPart<Value>,
         private piece: ScenarioContextPiece<Value>,
     ) {
     }
@@ -47,6 +47,8 @@ export class ScenarioContextHandle<Value> {
     replaceValue(newValue: Value): void {
         const newPiece = new ScenarioContextPiece(newValue, this.piece.allQualifiers());
 
-        this.piece = this.scenarioContext.replace(this.piece, newPiece);
+        this.part.replace(this.piece, newPiece);
+
+        this.piece = newPiece;
     }
 }
