@@ -4,20 +4,32 @@
   "description": "A Serenity/JS ability that lets actors use a ScenarioContext - an advanced, qualifier- and type-aware form of notes.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "jest",
     "test:unit": "jest test/unit",
     "test:acceptance": "jest test/acceptance",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "serenity-js",
     "screenplay-pattern",
     "testing"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Bloom Group",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BloomTechNL/serenity-scenario-context.git"
+  },
+  "homepage": "https://github.com/BloomTechNL/serenity-scenario-context#readme",
+  "bugs": {
+    "url": "https://github.com/BloomTechNL/serenity-scenario-context/issues"
+  },
   "type": "commonjs",
   "peerDependencies": {
     "@serenity-js/core": "^3.46.0"
