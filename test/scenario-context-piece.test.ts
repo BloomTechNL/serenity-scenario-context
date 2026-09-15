@@ -1,4 +1,4 @@
-import { ScenarioContextPiece } from '../../src';
+import { ScenarioContextPiece } from '../src/index';
 
 describe('ScenarioContextPiece', () => {
 

@@ -1,4 +1,4 @@
-import { ScenarioContext, UseScenarioContext } from '../../src';
+import { ScenarioContext, UseScenarioContext } from '../src/index';
 
 class Fruit {
     constructor(public readonly name: string) {

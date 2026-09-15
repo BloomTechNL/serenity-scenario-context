@@ -1,4 +1,4 @@
-import { ScenarioContext, ScenarioContextPart } from '../../src';
+import { ScenarioContext, ScenarioContextPart } from '../src/index';
 
 class Widget {
     constructor(public readonly name: string) {

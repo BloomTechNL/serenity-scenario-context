@@ -3,7 +3,7 @@ import {
     PieceNotFoundError,
     UnexpectedQualifierKeysError,
     UnknownQualifierKeyError,
-} from '../../src';
+} from '../src/index';
 
 class Fruit {
 }
