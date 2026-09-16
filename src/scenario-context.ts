@@ -2,6 +2,7 @@ import { Constructor } from './constructor';
 import { Qualifiers } from './qualifiers';
 import { ScenarioContextPart } from './scenario-context-part';
 import { ScenarioContextPiece } from './scenario-context-piece';
+import { UnexpectedQualifierKeysError } from './scenario-context-errors';
 
 /**
  * Holds the {@link ScenarioContextPiece} objects recorded during a scenario,
@@ -30,6 +31,26 @@ export class ScenarioContext {
         this.partFor(constructorOf(value) as Constructor<Value>).add(piece);
 
         return piece;
+    }
+
+    /**
+     * Puts `value`, qualified by the given `qualifiers`, on top of the part
+     * of this context for `value`'s type, like {@link ScenarioContext#add} -
+     * except that, rather than throwing when a piece of that type already
+     * exists in this context with this exact combination of qualifiers, its
+     * value is replaced in place.
+     *
+     * @returns the {@link ScenarioContextPiece} now holding `value` - either
+     *  a newly created one, or the existing piece whose value was replaced.
+     *
+     * @throws UnexpectedQualifierKeysError
+     *  if `value`'s type has already been added with a different *set of
+     *  qualifier keys* - see {@link ScenarioContextPart}.
+     */
+    addOrReplace<Value extends object>(value: Value, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
+        const piece = new ScenarioContextPiece(value, qualifiers);
+
+        return this.partFor(constructorOf(value) as Constructor<Value>).addOrReplace(piece);
     }
 
     /**

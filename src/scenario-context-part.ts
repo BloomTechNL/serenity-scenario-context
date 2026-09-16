@@ -37,15 +37,43 @@ export class ScenarioContextPart<Value = unknown> {
      *  combination of qualifiers.
      */
     add(piece: ScenarioContextPiece<Value>): void {
-        if (this.pieces.length > 0 && ! piece.hasSameQualifierKeysAs(this.pieces[0])) {
-            throw new UnexpectedQualifierKeysError(this.type, piece.qualifierKeys(), this.qualifierKeys());
-        }
+        this.assertQualifierKeysMatch(piece);
 
         if (this.pieces.some(existing => existing.hasSameQualifiersAs(piece))) {
             throw new DuplicateQualifiersError(this.type, piece.allQualifiers());
         }
 
         this.pieces.unshift(piece);
+    }
+
+    /**
+     * Puts `piece` on top of this part, like {@link ScenarioContextPart#add}
+     * - except that, rather than throwing when a piece already held by this
+     * part carries the exact same combination of qualifiers, that piece's
+     * value is replaced with `piece`'s value in place, and put on top.
+     *
+     * @returns the {@link ScenarioContextPiece} now on top of this part -
+     *  either `piece` itself, or the existing piece whose value was
+     *  replaced.
+     *
+     * @throws UnexpectedQualifierKeysError
+     *  if `piece`'s qualifier keys don't match the set of keys already
+     *  established for this type.
+     */
+    addOrReplace(piece: ScenarioContextPiece<Value>): ScenarioContextPiece<Value> {
+        this.assertQualifierKeysMatch(piece);
+
+        const existing = this.pieces.find(candidate => candidate.hasSameQualifiersAs(piece));
+
+        if (! existing) {
+            this.pieces.unshift(piece);
+            return piece;
+        }
+
+        existing.replace(piece.value);
+        this.spotlight(existing);
+
+        return existing;
     }
 
     /**
@@ -90,13 +118,23 @@ export class ScenarioContextPart<Value = unknown> {
 
         for (const piece of this.pieces) {
             if (piece.hasQualifiers(qualifiers)) {
-                this.pieces.splice(this.pieces.indexOf(piece), 1);
-                this.pieces.unshift(piece);
+                this.spotlight(piece);
 
                 return piece;
             }
         }
 
         throw new PieceNotFoundError(this.type, qualifiers);
+    }
+
+    private assertQualifierKeysMatch(piece: ScenarioContextPiece<Value>): void {
+        if (this.pieces.length > 0 && ! piece.hasSameQualifierKeysAs(this.pieces[0])) {
+            throw new UnexpectedQualifierKeysError(this.type, piece.qualifierKeys(), this.qualifierKeys());
+        }
+    }
+
+    private spotlight(piece: ScenarioContextPiece<Value>): void {
+        this.pieces.splice(this.pieces.indexOf(piece), 1);
+        this.pieces.unshift(piece);
     }
 }

@@ -46,6 +46,38 @@ describe('UseScenarioContext', () => {
         });
     });
 
+    describe('addOrReplace', () => {
+
+        it('makes the value findable by its type and qualifiers, when nothing matches yet', () => {
+            const ability = UseScenarioContext.using(new ScenarioContext());
+            const apple = new Fruit('apple');
+
+            ability.addOrReplace(apple, { color: 'red' });
+
+            expect(ability.find(Fruit, { color: 'red' })).toBe(apple);
+        });
+
+        it('replaces the value already qualified exactly the same, rather than throwing', () => {
+            const ability = UseScenarioContext.using(new ScenarioContext());
+            ability.add(new Fruit('apple'), { color: 'red' });
+            const cherry = new Fruit('cherry');
+
+            ability.addOrReplace(cherry, { color: 'red' });
+
+            expect(ability.find(Fruit, { color: 'red' })).toBe(cherry);
+        });
+
+        it('returns the context piece now holding the value, for convenience', () => {
+            const ability = UseScenarioContext.using(new ScenarioContext());
+            const apple = new Fruit('apple');
+
+            const piece = ability.addOrReplace(apple, { color: 'red' });
+
+            expect(piece.value).toBe(apple);
+            expect(piece.hasQualifiers({ color: 'red' })).toBe(true);
+        });
+    });
+
     describe('find', () => {
 
         it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {

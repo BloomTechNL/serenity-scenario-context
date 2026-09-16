@@ -141,6 +141,18 @@ const customer =
         .find(Customer);
 ```
 
+## Replacing a value in place
+
+`add` throws if a piece qualified exactly the same already exists. When you'd rather overwrite it than be told it's already there, use `addOrReplace`:
+
+```ts id="d8n3wl"
+UseScenarioContext
+    .as(actor)
+    .addOrReplace(updatedCustomer, { id: 'CUST-1' });
+```
+
+If no piece matches those qualifiers yet, it's added as usual.
+
 ## Sharing between actors
 
 A context can be shared by multiple actors:

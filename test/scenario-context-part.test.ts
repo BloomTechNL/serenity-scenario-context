@@ -72,6 +72,76 @@ describe('ScenarioContextPart', () => {
         });
     });
 
+    describe('addOrReplace', () => {
+
+        it('adds a new piece when none matches its qualifiers', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+
+            part.addOrReplace(pieceOf(apple, { variety: 'fuji' }));
+
+            expect(part.find({ variety: 'fuji' })).toBe(apple);
+        });
+
+        it('returns the piece that was added, for convenience', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const piece = pieceOf(new Fruit('apple'), { variety: 'fuji' });
+
+            expect(part.addOrReplace(piece)).toBe(piece);
+        });
+
+        it('replaces the value of the existing piece sharing the exact same combination of qualifiers, rather than throwing', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { variety: 'fuji' }));
+            const greenApple = new Fruit('green apple');
+
+            part.addOrReplace(pieceOf(greenApple, { variety: 'fuji' }));
+
+            expect(part.find({ variety: 'fuji' })).toBe(greenApple);
+        });
+
+        it('returns the existing piece, now holding the replacement value', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const original = pieceOf(new Fruit('apple'), { variety: 'fuji' });
+            part.add(original);
+            const greenApple = new Fruit('green apple');
+
+            const result = part.addOrReplace(pieceOf(greenApple, { variety: 'fuji' }));
+
+            expect(result).toBe(original);
+            expect(result.value).toBe(greenApple);
+        });
+
+        it('does not create a second piece when replacing', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { variety: 'fuji' }));
+            part.addOrReplace(pieceOf(new Fruit('green apple'), { variety: 'fuji' }));
+
+            part.findPiece({ variety: 'fuji' });
+
+            expect(() => part.findPiece()).not.toThrow();
+        });
+
+        it('puts the replaced piece in the spotlight, on top of the part', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { variety: 'fuji' }));
+            part.add(pieceOf(new Fruit('banana'), { variety: 'cavendish' }));
+
+            const greenApple = new Fruit('green apple');
+            part.addOrReplace(pieceOf(greenApple, { variety: 'fuji' }));
+
+            expect(part.find()).toBe(greenApple);
+        });
+
+        it('rejects a piece carrying a different set of qualifier keys, just like add', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { color: 'red' }));
+
+            expect(() => part.addOrReplace(pieceOf(new Fruit('banana'), { color: 'yellow', texture: 'soft' })))
+                .toThrow(UnexpectedQualifierKeysError);
+        });
+    });
+
     describe('findPiece', () => {
 
         it('returns the piece holding the single value of this part\'s type', () => {

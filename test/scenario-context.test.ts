@@ -47,6 +47,36 @@ describe('ScenarioContext', () => {
         });
     });
 
+    describe('addOrReplace', () => {
+
+        it('puts the piece in the part for its type, when nothing matches its qualifiers yet', () => {
+            const context = new ScenarioContext();
+            const piece = context.addOrReplace(new Widget('spanner'), { material: 'metal' });
+
+            expect(context.partFor(Widget).findPiece({ material: 'metal' })).toBe(piece);
+        });
+
+        it('replaces the value of the piece already qualified exactly the same, rather than throwing', () => {
+            const context = new ScenarioContext();
+            context.add(new Widget('spanner'), { material: 'metal' });
+            const mallet = new Widget('mallet');
+
+            context.addOrReplace(mallet, { material: 'metal' });
+
+            expect(context.partFor(Widget).find({ material: 'metal' })).toBe(mallet);
+        });
+
+        it('propagates the fixed-qualifier-keys constraint enforced by the part - see ScenarioContextPart', () => {
+            const context = new ScenarioContext();
+            context.add(new Widget('spanner'), { material: 'metal' });
+
+            expect(() => context.addOrReplace(new Widget('mallet'), { material: 'wood', weight: 'heavy' })).toThrow(
+                'Could not add Widget qualified by material, weight - every Widget in the scenario context must be '
+                + 'qualified by exactly material, as established when the first one was added'
+            );
+        });
+    });
+
     describe('partFor', () => {
 
         it('returns an empty part for a type nothing has been added for yet', () => {

@@ -3,6 +3,7 @@ import { Ability } from '@serenity-js/core';
 import { Constructor } from './constructor';
 import { Qualifiers } from './qualifiers';
 import { ScenarioContext } from './scenario-context';
+import { UnexpectedQualifierKeysError } from './scenario-context-errors';
 import { ScenarioContextPiece } from './scenario-context-piece';
 
 /**
@@ -69,7 +70,7 @@ export class UseScenarioContext extends Ability {
      * @returns the {@link ScenarioContextPiece} that was created, for
      *  convenience.
      *
-     * @throws Error
+     * @throws UnexpectedQualifierKeysError
      *  if `value`'s type has already been added with a different *set of
      *  qualifier keys*, or if a piece of that type already exists in the
      *  scenario context with this exact combination of qualifiers - see
@@ -77,6 +78,24 @@ export class UseScenarioContext extends Ability {
      */
     add<Value extends object>(value: Value, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
         return this.scenarioContext.add(value, qualifiers);
+    }
+
+    /**
+     * Puts `value`, qualified by the given `qualifiers`, on top of the
+     * scenario context, like {@link UseScenarioContext#add} - except that,
+     * rather than throwing when a piece of that type already exists in the
+     * scenario context with this exact combination of qualifiers, its value
+     * is replaced in place.
+     *
+     * @returns the {@link ScenarioContextPiece} now holding `value` - either
+     *  a newly created one, or the existing piece whose value was replaced.
+     *
+     * @throws UnexpectedQualifierKeysError
+     *  if `value`'s type has already been added with a different *set of
+     *  qualifier keys* - see {@link ScenarioContext}.
+     */
+    addOrReplace<Value extends object>(value: Value, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
+        return this.scenarioContext.addOrReplace(value, qualifiers);
     }
 
     /**
