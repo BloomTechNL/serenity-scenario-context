@@ -1,6 +1,6 @@
 {
   "name": "serenity-scenario-context",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A Serenity/JS ability that lets actors use a ScenarioContext - an advanced, qualifier- and type-aware form of notes.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
