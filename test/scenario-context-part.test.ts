@@ -1,5 +1,6 @@
 import {
     DuplicateQualifiersError,
+    MultiplePiecesFoundError,
     PieceNotFoundError,
     Qualifiers,
     ScenarioContextPart,
@@ -291,6 +292,94 @@ describe('ScenarioContextPart', () => {
 
             expect(() => part.find({ color: 'red', extra: 'x' })).toThrow(UnknownQualifierKeyError);
             expect(() => part.find({ color: 'green' })).toThrow(PieceNotFoundError);
+        });
+    });
+
+    describe('findOnePiece', () => {
+
+        it('returns the piece holding the single value of this part\'s type', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple));
+
+            expect(part.findOnePiece().value).toBe(apple);
+        });
+
+        it('returns the single piece matching the given qualifiers', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple, { color: 'red' }));
+            part.add(pieceOf(new Fruit('banana'), { color: 'yellow' }));
+
+            expect(part.findOnePiece({ color: 'red' }).value).toBe(apple);
+        });
+
+        it('throws when nothing matches the given qualifiers', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { color: 'red' }));
+
+            expect(() => part.findOnePiece({ color: 'yellow' })).toThrow(PieceNotFoundError);
+        });
+
+        it('throws when given a key that is not one of the type\'s qualifier keys', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { color: 'red' }));
+
+            expect(() => part.findOnePiece({ ripeness: 'ripe' })).toThrow(UnknownQualifierKeyError);
+        });
+
+        it('throws MultiplePiecesFoundError, rather than falling back to the most recently used match, when more than one piece matches', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('fuji apple'), { color: 'red', texture: 'crunchy' }));
+            part.add(pieceOf(new Fruit('cavendish banana'), { color: 'yellow', texture: 'soft' }));
+
+            expect(() => part.findOnePiece()).toThrow(MultiplePiecesFoundError);
+            expect(() => part.findOnePiece()).toThrow(
+                'Found 2 instances of Fruit in the scenario context, expected exactly one'
+            );
+        });
+
+        it('reports how many pieces matched a narrower set of qualifiers', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('fuji apple'), { color: 'red', texture: 'crunchy' }));
+            part.add(pieceOf(new Fruit('red delicious'), { color: 'red', texture: 'soft' }));
+            part.add(pieceOf(new Fruit('cavendish banana'), { color: 'yellow', texture: 'soft' }));
+
+            expect(() => part.findOnePiece({ color: 'red' })).toThrow(
+                'Found 2 instances of Fruit qualified by color=red in the scenario context, expected exactly one'
+            );
+        });
+
+        it('puts the found value in the spotlight, on top of the part', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple, { texture: 'crunchy' }));
+            part.add(pieceOf(new Fruit('banana'), { texture: 'soft' }));
+
+            part.findOnePiece({ texture: 'crunchy' });
+
+            expect(part.find()).toBe(apple);
+        });
+    });
+
+    describe('findOne', () => {
+
+        it('returns the value of the piece findOnePiece would find, rather than the piece itself', () => {
+            const part = new ScenarioContextPart(Fruit);
+            const apple = new Fruit('apple');
+            part.add(pieceOf(apple, { texture: 'crunchy' }));
+
+            expect(part.findOne({ texture: 'crunchy' })).toBe(apple);
+        });
+
+        it('throws the same errors as findOnePiece', () => {
+            const part = new ScenarioContextPart(Fruit);
+            part.add(pieceOf(new Fruit('apple'), { color: 'red', texture: 'crunchy' }));
+            part.add(pieceOf(new Fruit('cherry'), { color: 'red', texture: 'shiny' }));
+
+            expect(() => part.findOne({ extra: 'x' })).toThrow(UnknownQualifierKeyError);
+            expect(() => part.findOne({ color: 'green' })).toThrow(PieceNotFoundError);
+            expect(() => part.findOne({ color: 'red' })).toThrow(MultiplePiecesFoundError);
         });
     });
 

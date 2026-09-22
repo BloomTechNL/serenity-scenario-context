@@ -1,4 +1,4 @@
-import { ScenarioContext, UseScenarioContext } from '../src/index';
+import { MultiplePiecesFoundError, ScenarioContext, UseScenarioContext } from '../src/index';
 
 class Fruit {
     constructor(public readonly name: string) {
@@ -123,6 +123,47 @@ describe('UseScenarioContext', () => {
             found.replace(greenApple);
 
             expect(ability.find(Fruit, { texture: 'crunchy' })).toBe(greenApple);
+        });
+    });
+
+    describe('findOne', () => {
+
+        it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {
+            const context = new ScenarioContext();
+            const ability = UseScenarioContext.using(context);
+            const apple = context.add(new Fruit('apple'), { texture: 'crunchy' }).value;
+
+            expect(ability.findOne(Fruit, { texture: 'crunchy' })).toBe(apple);
+        });
+
+        it('throws, rather than falling back to the most recently used match, when more than one piece matches', () => {
+            const ability = UseScenarioContext.using(new ScenarioContext());
+            ability.add(new Fruit('apple'), { variety: 'gala' });
+            ability.add(new Fruit('banana'), { variety: 'cavendish' });
+
+            expect(() => ability.findOne(Fruit)).toThrow(MultiplePiecesFoundError);
+        });
+    });
+
+    describe('findOnePiece', () => {
+
+        it('delegates to the ScenarioContextPart for the given type, in this ability\'s context', () => {
+            const context = new ScenarioContext();
+            const ability = UseScenarioContext.using(context);
+            const apple = context.add(new Fruit('apple'), { texture: 'crunchy' }).value;
+
+            expect(ability.findOnePiece(Fruit, { texture: 'crunchy' }).value).toBe(apple);
+        });
+
+        it('returns the piece, letting the caller replace its value afterwards', () => {
+            const ability = UseScenarioContext.using(new ScenarioContext());
+            ability.add(new Fruit('apple'), { texture: 'crunchy' });
+
+            const found = ability.findOnePiece(Fruit, { texture: 'crunchy' });
+            const greenApple = new Fruit('green apple');
+            found.replace(greenApple);
+
+            expect(ability.findOne(Fruit, { texture: 'crunchy' })).toBe(greenApple);
         });
     });
 });

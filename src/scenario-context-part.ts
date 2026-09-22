@@ -2,6 +2,7 @@ import { Constructor } from './constructor';
 import { Qualifiers } from './qualifiers';
 import {
     DuplicateQualifiersError,
+    MultiplePiecesFoundError,
     PieceNotFoundError,
     UnexpectedQualifierKeysError,
     UnknownQualifierKeyError,
@@ -125,6 +126,62 @@ export class ScenarioContextPart<Value = unknown> {
         }
 
         throw new PieceNotFoundError(this.type, qualifiers);
+    }
+
+    /**
+     * Shorthand for {@link ScenarioContextPart#findOnePiece} that returns
+     * the value straight away - reach for this unless you need to
+     * {@link ScenarioContextPiece#replace} it afterwards.
+     *
+     * @throws UnknownQualifierKeyError
+     *  if `qualifiers` names a key that isn't one of this type's qualifier
+     *  keys.
+     * @throws PieceNotFoundError
+     *  if no piece matches `qualifiers`.
+     * @throws MultiplePiecesFoundError
+     *  if more than one piece matches `qualifiers`.
+     */
+    findOne(qualifiers: Qualifiers = {}): Value {
+        return this.findOnePiece(qualifiers).value;
+    }
+
+    /**
+     * Finds the single piece qualified by every key/value pair in
+     * `qualifiers`, and puts it on top of this part - "in the spotlight" -
+     * like {@link ScenarioContextPart#findPiece} - except that, rather than
+     * falling back to the most recently used match when `qualifiers` is
+     * ambiguous, it throws.
+     *
+     * @throws UnknownQualifierKeyError
+     *  if `qualifiers` names a key that isn't one of this type's qualifier
+     *  keys.
+     * @throws PieceNotFoundError
+     *  if no piece matches `qualifiers`.
+     * @throws MultiplePiecesFoundError
+     *  if more than one piece matches `qualifiers`.
+     */
+    findOnePiece(qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
+        if (this.pieces.length > 0) {
+            const unknownKeys = Object.keys(qualifiers).filter(key => ! this.qualifierKeys().has(key));
+
+            if (unknownKeys.length > 0) {
+                throw new UnknownQualifierKeyError(this.type, this.qualifierKeys(), unknownKeys);
+            }
+        }
+
+        const matches = this.pieces.filter(piece => piece.hasQualifiers(qualifiers));
+
+        if (matches.length === 0) {
+            throw new PieceNotFoundError(this.type, qualifiers);
+        }
+
+        if (matches.length > 1) {
+            throw new MultiplePiecesFoundError(this.type, qualifiers, matches.length);
+        }
+
+        this.spotlight(matches[0]);
+
+        return matches[0];
     }
 
     private assertQualifierKeysMatch(piece: ScenarioContextPiece<Value>): void {

@@ -76,3 +76,20 @@ export class PieceNotFoundError extends Error {
         this.name = 'PieceNotFoundError';
     }
 }
+
+/**
+ * Thrown by {@link ScenarioContextPart#findOne} when more than one piece
+ * matches the requested qualifiers.
+ */
+export class MultiplePiecesFoundError extends Error {
+
+    constructor(type: Constructor<unknown>, qualifiers: Qualifiers, count: number) {
+        const entries = Object.entries(qualifiers);
+        const description = entries.length > 0
+            ? `${ type.name } qualified by ${ describeQualifiers(qualifiers) } in the scenario context`
+            : `${ type.name } in the scenario context`;
+
+        super(`Found ${ count } instances of ${ description }, expected exactly one`);
+        this.name = 'MultiplePiecesFoundError';
+    }
+}

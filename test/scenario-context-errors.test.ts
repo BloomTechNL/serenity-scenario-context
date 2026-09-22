@@ -1,5 +1,6 @@
 import {
     DuplicateQualifiersError,
+    MultiplePiecesFoundError,
     PieceNotFoundError,
     UnexpectedQualifierKeysError,
     UnknownQualifierKeyError,
@@ -105,5 +106,29 @@ describe('PieceNotFoundError', () => {
 
         expect(error).toBeInstanceOf(Error);
         expect(error.name).toBe('PieceNotFoundError');
+    });
+});
+
+describe('MultiplePiecesFoundError', () => {
+
+    it('names the type, the requested qualifiers, and how many pieces matched', () => {
+        const error = new MultiplePiecesFoundError(Fruit, { color: 'red' }, 2);
+
+        expect(error.message).toBe(
+            'Found 2 instances of Fruit qualified by color=red in the scenario context, expected exactly one'
+        );
+    });
+
+    it('omits the qualifiers when none were requested', () => {
+        const error = new MultiplePiecesFoundError(Fruit, {}, 3);
+
+        expect(error.message).toBe('Found 3 instances of Fruit in the scenario context, expected exactly one');
+    });
+
+    it('is a plain Error, named after itself', () => {
+        const error = new MultiplePiecesFoundError(Fruit, {}, 2);
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.name).toBe('MultiplePiecesFoundError');
     });
 });

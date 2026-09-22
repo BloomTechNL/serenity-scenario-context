@@ -117,4 +117,24 @@ export class UseScenarioContext extends Ability {
     findPiece<Value>(type: Constructor<Value>, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
         return this.scenarioContext.partFor(type).findPiece(qualifiers);
     }
+
+    /**
+     * Finds the single value of `type`, qualified by every key/value pair in
+     * `qualifiers` - see {@link ScenarioContextPart#findOne}. Reach for
+     * {@link UseScenarioContext#findOnePiece} instead when you'll want to
+     * swap the value out afterwards.
+     */
+    findOne<Value>(type: Constructor<Value>, qualifiers: Qualifiers = {}): Value {
+        return this.scenarioContext.partFor(type).findOne(qualifiers);
+    }
+
+    /**
+     * The same search as {@link UseScenarioContext#findOne}, but returning
+     * the {@link ScenarioContextPiece} that was found rather than just its
+     * value - call {@link ScenarioContextPiece#replace} on it to swap the
+     * value out for a new one, in place.
+     */
+    findOnePiece<Value>(type: Constructor<Value>, qualifiers: Qualifiers = {}): ScenarioContextPiece<Value> {
+        return this.scenarioContext.partFor(type).findOnePiece(qualifiers);
+    }
 }
