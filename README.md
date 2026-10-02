@@ -5,7 +5,7 @@ A type-safe way to share and retrieve scenario state in [Serenity/JS](https://se
 `serenity-scenario-context` provides two things that make scenario state easier to work with:
 
 1. **Decentralized typing** — capabilities can add their own state without maintaining a central `Notes` type.
-2. **Spotlight behavior** — when multiple objects of the same type exist, the most recently used object can be retrieved naturally, while qualifiers allow you to explicitly select another one.
+2. **Multi-instance collision handling** — when a scenario holds several objects of the same type, they don't collide: qualifiers tell them apart, collisions are caught instead of silently overwritten, and ambiguous lookups can be made to fail loudly.
 
 ## Why Scenario Context?
 
@@ -53,23 +53,18 @@ context.find(Payment);
 
 There is no central schema containing every possible type of scenario state.
 
-### 2. Spotlight behavior
+### 2. Multiple instances of the same type
 
-Consider a scenario that creates several tickets:
+Looking state up by type has an obvious catch: what if a scenario needs two objects of the same type?
 
 ```ts id="n8w4kc"
 CreateTicket.called('Billing problem');
-ResolveTicket();
-
 CreateTicket.called('Technical problem');
-ResolveTicket();
 ```
 
-With `ScenarioContext`, the most recently used `Ticket` is automatically in the **spotlight**.
+Both are a `Ticket`. A context keyed by type alone would have to either overwrite the first one or pick one arbitrarily — and the test would quietly operate on the wrong ticket.
 
-So `ResolveTicket()` can operate on the current ticket without requiring every capability to pass around or invent a new key.
-
-When multiple objects need to be distinguished, qualifiers make the lookup explicit:
+`ScenarioContext` makes the collision explicit. Instances of the same type are told apart by **qualifiers**:
 
 ```ts id="v2p6yx"
 context.add(billingTicket, {
@@ -87,10 +82,39 @@ context.find(Ticket, {
 });
 ```
 
-This gives you both:
+The rules keep collisions from going unnoticed:
 
-* **implicit, convenient access** to the current object;
-* **explicit, qualified lookup** when several objects matter.
+* Every instance of a type is qualified by the same set of keys (here: `label`). Adding a `Ticket` with different keys throws `UnexpectedQualifierKeysError`.
+* Adding a second instance with exactly the same qualifiers throws `DuplicateQualifiersError`, rather than overwriting the first. If overwriting *is* what you want, use [`addOrReplace`](#replacing-a-value-in-place).
+* Looking up an unknown qualifier key throws `UnknownQualifierKeyError`, and looking up something that isn't there throws `PieceNotFoundError`.
+
+#### Resolving ambiguity: you choose how strict to be
+
+A lookup only needs as many qualifier keys as it takes to tell the instance apart from the rest. When it's still ambiguous, you decide what happens:
+
+```ts id="k3d8ua"
+// Strict: throws MultiplePiecesFoundError if more than one Ticket matches.
+context.findOne(Ticket);
+
+// Convenient: returns the most recently used matching Ticket.
+context.find(Ticket);
+```
+
+`find` falls back to the **spotlight**: the most recently added or looked-up instance of a type. This lets a capability like `ResolveTicket()` operate on "the current ticket" without every step having to pass around a key:
+
+```ts id="w5t1ge"
+CreateTicket.called('Billing problem');
+ResolveTicket();                         // resolves the billing ticket
+
+CreateTicket.called('Technical problem');
+ResolveTicket();                         // resolves the technical ticket
+```
+
+This gives you:
+
+* **explicit, qualified lookup** when several objects matter;
+* **strict lookup** (`findOne`) when an ambiguous match would be a bug;
+* **implicit, convenient access** to the current object (`find`) when it wouldn't.
 
 ### Notepad vs. Scenario Context
 
@@ -104,12 +128,13 @@ Notepad
 ScenarioContext
     type + qualifiers → value
     decentralized
-    + spotlight for the latest object
+    + qualifiers for multiple instances of a type
+    + collisions detected, ambiguity optionally strict
 ```
 
 `Notepad` is a great choice for small, stable, explicitly named scenario state.
 
-`ScenarioContext` is designed for scenarios where state is more dynamic, multiple objects of the same type are common, or capabilities should contribute state independently.
+`ScenarioContext` is designed for scenarios where state is more dynamic, multiple objects of the same type are common (and must not collide), or capabilities should contribute state independently.
 
 ## Basic usage
 
@@ -170,17 +195,18 @@ State added by one actor can therefore be retrieved by another.
 
 `Notepad` is a **named scenario state store**.
 
-`ScenarioContext` is a **decentralized, type-aware context with spotlight behavior**:
+`ScenarioContext` is a **decentralized, type-aware context that handles multiple instances of the same type**:
 
 ```text id="h4t6zs"
              Scenario Context
                     │
           ┌─────────┴─────────┐
           │                   │
-   decentralized          spotlight
-      typing               behavior
+   decentralized         multi-instance
+      typing              collisions
           │                   │
-   type + qualifiers    latest object
+   type + qualifiers    qualify, detect,
+                        or use the spotlight
 ```
 
-It keeps scenario state close to the capabilities that produce and consume it, while making the most recently used object naturally available when explicit identification is unnecessary.
+It keeps scenario state close to the capabilities that produce and consume it, while making sure that several objects of the same type can coexist without colliding — and that the most recently used one is still naturally available when explicit identification is unnecessary.
