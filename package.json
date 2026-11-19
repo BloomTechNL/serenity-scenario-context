@@ -9,11 +9,12 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
     "test:unit": "jest test/unit",
     "test:acceptance": "jest test/acceptance",
     "prepare": "husky",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "serenity-js",
