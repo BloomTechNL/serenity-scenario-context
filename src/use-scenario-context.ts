@@ -19,7 +19,7 @@ import { ScenarioContextPiece } from './scenario-context-piece';
  *
  * ```ts
  * import { actorCalled } from '@serenity-js/core';
- * import { UseScenarioContext } from '@your-org/serenity-scenario-context';
+ * import { UseScenarioContext } from '@bloom-group/serenity-scenario-context';
  *
  * class Ticket {
  *   constructor(public readonly id: string) {}

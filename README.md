@@ -2,7 +2,7 @@
 
 A type-safe way to share and retrieve scenario state in [Serenity/JS](https://serenity-js.org/).
 
-`serenity-scenario-context` provides two things that make scenario state easier to work with:
+`@bloom-group/serenity-scenario-context` provides two things that make scenario state easier to work with:
 
 1. **Decentralized typing** — capabilities can add their own state without maintaining a central `Notes` type.
 2. **Multi-instance collision handling** — when a scenario holds several objects of the same type, they don't collide: qualifiers tell them apart, collisions are caught instead of silently overwritten, and ambiguous lookups can be made to fail loudly.
